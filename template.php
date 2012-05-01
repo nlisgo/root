@@ -71,7 +71,7 @@ function root_element_info_alter(&$elements) {
  * Implements hook_css_alter().
  */
 function root_css_alter(&$css) {
-  if (root_extension_is_enabled('manipulate') && $exclude = theme_get_setting('root_css_exclude')) {
+  if (root_extension_is_enabled('manipulation') && $exclude = theme_get_setting('root_css_exclude')) {
     root_exclude_assets($css, $exclude);
   }
 
@@ -91,7 +91,7 @@ function root_css_alter(&$css) {
  * Implements hook_js_alter().
  */
 function root_js_alter(&$js) {
-  if (root_extension_is_enabled('manipulate') && $exclude = theme_get_setting('root_js_exclude')) {
+  if (root_extension_is_enabled('manipulation') && $exclude = theme_get_setting('root_js_exclude')) {
     root_exclude_assets($js, $exclude);
   }
 }
@@ -158,6 +158,41 @@ function root_theme_registry_alter(&$registry) {
       }
     }
   }
+
+  // Store all configured class rules in the right hook definition and add the
+  // class killer hook to the array of preprocess functions.
+  if ($rules = theme_get_setting('root_class_rules')) {
+    foreach ($rules as $rule) {
+      // Only write valid rules into the registry.
+      if ($rule = root_parse_class_rule($rule)) {
+        // Only proceed if the hook that this rule is targeted at exists.
+        if (isset($registry[$rule['hook']])) {
+          // Store the class rule in the registry for this hook.
+          $registry[$rule['hook']]['class rules'][] = $rule;
+
+          // Make sure that we don't add the hook multiple times.
+          if (!array_search('root_apply_class_rules', $registry[$rule['hook']]['preprocess functions'])) {
+            $registry[$rule['hook']]['preprocess functions'][] = 'root_apply_class_rules';
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_html_head_alter().
+ */
+function root_html_head_alter(&$head) {
+  // Simplify the meta tag for character encoding.
+  $head['system_meta_content_type']['#attributes'] = array('charset' => str_replace('text/html; charset=', '', $head['system_meta_content_type']['#attributes']['content']));
+}
+
+/**
+ * Implements hook_preprocess().
+ */
+function root_preprocess(&$variables, $hook) {
+  //dpm($variables);
 }
 
 /**

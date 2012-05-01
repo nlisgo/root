@@ -7,20 +7,21 @@
 
 /**
  * Retrieves all themes that can be used as base themes for generating
- * subthemes. Viable base themes are all non-starterkit themes that are based on 'root',
- * as well as 'root' itself.
+ * subthemes. All non-starterkit themes that are based on 'root', as well as
+ * 'root' itself, are considered viable base themes.
+ *
+ * @return array
+ *   An array of theme names keyed with the machine-readable name of each theme.
  */
 function root_generator_base_themes() {
   $themes = list_themes();
+  // Root itself is always a possible option ...
   $options = array('root' => $themes['root']->info['name']);
 
   foreach ($themes as $theme) {
-    if (isset($theme->info['base theme']) && empty($theme->info['starterkit'])) {
-      $base = system_find_base_themes($themes, $theme->name);
-
-      if (isset($base['root'])) {
-        $options[$theme->name] = $theme->info['name'];
-      }
+    // ... As well as all Root based themes that are not starterkits.
+    if (isset($theme->info['base theme']) && array_key_exists('root', system_find_base_themes($themes, $theme->name)) && empty($theme->info['starterkit'])) {
+      $options[$theme->name] = $theme->info['name'];
     }
   }
 
@@ -28,16 +29,23 @@ function root_generator_base_themes() {
 }
 
 /**
- * @todo
+ * Retrieves all themes that can be used as starterkits for a given base theme.
+ *
+ * @param $base
+ *   (Optional) The machine-readable name of a base theme to filter all the
+ *   available starterkits for.
+ *
+ * @return array
+ *   An array of theme names keyed with the machine-readable name of each theme.
  */
 function root_generator_starterkits($base = NULL) {
-  $bases = root_generator_base_themes();
-
+  // Retrieve all the possible base themes.
   $options = array();
   foreach (list_themes() as $name => $theme) {
     $info = $theme->info;
 
-    if (!empty($info['starterkit']) && isset($info['base theme']) && array_key_exists($info['base theme'], $bases) && ($info['base theme'] == $base || !isset($base))) {
+    // A starterkit is always flagged as such in the .info file.
+    if (!empty($info['starterkit']) && isset($info['base theme']) && (!isset($base) || $info['base theme'] == $base)) {
       $options[$name] = $info['name'] . '<div class="description">' . $info['description'] . '</div>';
     }
   }
@@ -46,14 +54,21 @@ function root_generator_starterkits($base = NULL) {
 }
 
 /**
- * @todo
+ * Recursively copies a directory from a given source to a given destination.
+ *
+ * @param $source
+ *   The source path.
+ * @param $destination
+ *   The destination path.
+ *
+ * @return bool
+ *   TRUE if the operation succeeded, FALSE otherwise.
  */
 function root_generator_copy_recursive($source, $destination) {
   if (is_dir($source)) {
     if (!file_prepare_directory($destination, FILE_CREATE_DIRECTORY)) {
       return FALSE;
     }
-
     $directory = dir($source);
 
     while (FALSE !== ($read = $directory->read())) {
@@ -63,7 +78,6 @@ function root_generator_copy_recursive($source, $destination) {
         }
       }
     }
-
     $directory->close();
   }
   else {
@@ -74,7 +88,17 @@ function root_generator_copy_recursive($source, $destination) {
 }
 
 /**
- * @todo
+ * Moves a directory from a given source to a given destination.
+ *
+ * @param $source
+ *   The source path.
+ * @param $destination
+ *   The destination path.
+ *
+ * @return bool
+ *   TRUE if the operation succeeded, FALSE otherwise.
+ *
+ * @see root_generator_copy_recursive()
  */
 function root_generator_move($source, $destination) {
   if (root_generator_copy_recursive($source, $destination)) {
@@ -87,16 +111,32 @@ function root_generator_move($source, $destination) {
 }
 
 /**
- * @todo
+ * Recursively rewrites (and renames) all files in a given path.
+ *
+ * @param $path
+ *   The path to rewrite all files in.
+ * @param $search
+ *   The string to look for when replacing the file names and contents.
+ * @param $replace
+ *   The string to replace $search with (file contents).
+ * @param $rename
+ *   The string to replace $search with (file names).
+ *
+ * @return bool
+ *   TRUE if the operation succeeded, FALSE otherwise.
+ *
+ * @see root_generator_replace_contents()
  */
 function root_generator_rewrite_recursive($path, $search, $replace, $rename) {
   if ($path !== ($new = str_replace($search, $rename, $path))) {
+    // First, try to rename (move) the file if the name was changed.
     if (!$path = file_unmanaged_move($path, $new, FILE_EXISTS_REPLACE)) {
       return FALSE;
     };
   }
 
   if (is_dir($path)) {
+    // If the file actually is a directory, proceed with the recursion.
     $directory = dir($path);
 
     while (FALSE !== ($read = $directory->read())) {
@@ -117,13 +157,31 @@ function root_generator_rewrite_recursive($path, $search, $replace, $rename) {
 }
 
 /**
- * @todo
+ * Replaces all occurrences of a given string in a given file.
+ *
+ * @param $file
+ *   The file to replace all occurrences of $search in.
+ * @param $search
+ *   The string to look for when replacing the file contents.
+ * @param $replace
+ *   The string to replace $search with (file contents).
+ * @param $regex
+ *   (Optional) Whether $search is a regex pattern. Defaults to FALSE.
+
+ * @see root_generator_rewrite_recursive()
  */
-function root_generator_replace_contents($file, $search, $replace) {
+function root_generator_replace_contents($file, $search, $replace, $regex = FALSE) {
+  // Make sure we don't choke on anything that is not a file. Also, it doesn't
+  // make sense to load the file contents of an empty file.
   if (is_file($file) && filesize($file) > 0) {
     $before = file_get_contents($file);
 
-    if ($before != ($after = str_replace($search, $replace, $before))) {
+    // Use preg_replace() if the given $search string is a regex pattern.
+    if ($regex && $before != ($after = preg_replace($search, $replace, $before))) {
+      file_unmanaged_save_data($after, $file, FILE_EXISTS_REPLACE);
+    }
+    // Otherwise simply use str_replace().
+    elseif (!$regex && $before != ($after = str_replace($search, $replace, $before))) {
       file_unmanaged_save_data($after, $file, FILE_EXISTS_REPLACE);
     }
   }

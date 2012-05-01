@@ -5,6 +5,7 @@ engine = phptemplate
 core = 7.x
 base theme = bartik
 
+stylesheets[all and (min-width: 400px)][] = css/mediaquery.css
 features[] = logo
 features[] = favicon
 features[] = name

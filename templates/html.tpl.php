@@ -40,14 +40,13 @@
  * @see template_preprocess_html()
  * @see template_process()
  */
-?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML+RDFa 1.0//EN" "http://www.w3.org/MarkUp/DTD/xhtml-rdfa-1.dtd">
+?><!DOCTYPE html>
 <?php if (root_extension_is_enabled('compatibility') && theme_get_setting('root_conditional_comments_html')): ?>
-  <!--[if lt IE 7]>  <html class="no-js ie ie6 lte9 lte8 lte7" xmlns="http://www.w3.org/1999/xhtml" xml:lang="<?php print $language->language; ?>" version="XHTML+RDFa 1.0" dir="<?php print $language->dir; ?>" <?php print $rdf_namespaces; ?>> <![endif]-->
-  <!--[if IE 7]>     <html class="no-js ie ie7 lte9 lte8 lte7" xmlns="http://www.w3.org/1999/xhtml" xml:lang="<?php print $language->language; ?>" version="XHTML+RDFa 1.0" dir="<?php print $language->dir; ?>" <?php print $rdf_namespaces; ?>> <![endif]-->
-  <!--[if IE 8]>     <html class="no-js ie ie8 lte9 lte8" xmlns="http://www.w3.org/1999/xhtml" xml:lang="<?php print $language->language; ?>" version="XHTML+RDFa 1.0" dir="<?php print $language->dir; ?>" <?php print $rdf_namespaces; ?>> <![endif]-->
-  <!--[if IE 9]>     <html class="no-js ie ie9 lte9" xmlns="http://www.w3.org/1999/xhtml" xml:lang="<?php print $language->language; ?>" version="XHTML+RDFa 1.0" dir="<?php print $language->dir; ?>" <?php print $rdf_namespaces; ?>> <![endif]-->
-  <!--[if gt IE 9]>  <html class="no-js" xmlns="http://www.w3.org/1999/xhtml" xml:lang="<?php print $language->language; ?>" version="XHTML+RDFa 1.0" dir="<?php print $language->dir; ?>" <?php print $rdf_namespaces; ?>> <![endif]-->
-  <!--[if !IE]><!--> <html class="no-js" xmlns="http://www.w3.org/1999/xhtml" xml:lang="<?php print $language->language; ?>" version="XHTML+RDFa 1.0" dir="<?php print $language->dir; ?>" <?php print $rdf_namespaces; ?>> <![endif]-->
+  <!--[if IEMobile 7]><html class="no-js iem7"<?php print $attributes; ?>><![endif]-->
+  <!--[if lte IE 6]><html class="no-js lt-ie9 lt-ie8 lt-ie7"<?php print $attributes; ?>><![endif]-->
+  <!--[if (IE 7)&(!IEMobile)]><html class="no-js lt-ie9 lt-ie8"<?php print $attributes; ?>><![endif]-->
+  <!--[if IE 8]><html class="no-js lt-ie9"<?php print $attributes; ?>><![endif]-->
+  <!--[if (gte IE 9)|(gt IEMobile 7)]><!--><html class="no-js"<?php print $attributes ?> <?php print $rdf_namespaces; ?>><!--<![endif]-->
 <?php else: ?>
   <html class="no-js" xmlns="http://www.w3.org/1999/xhtml" xml:lang="<?php print $language->language; ?>" version="XHTML+RDFa 1.0" dir="<?php print $language->dir; ?>" <?php print $rdf_namespaces; ?>>
 <?php endif; ?>
@@ -60,7 +59,7 @@
     <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
   <?php endif; ?>
 </head>
-<body class="<?php print $classes; ?>" <?php print $attributes;?>>
+<body<?php print $attributes;?>>
   <a href="#main-content" class="element-invisible element-focusable"><?php print t('Skip to main content'); ?></a>
   <?php print $page_top; ?>
   <?php print $page; ?>

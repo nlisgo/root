@@ -35,17 +35,11 @@ function root_extension_compatibility_preprocess_html(&$variables) {
     drupal_add_html_head($meta, 'root-viewport');
   }
 
-  // Add a meta tag to enforce "edge" (highest available) rendering mode for
-  // Internet Explorer.
-  if (theme_get_setting('root_chrome_edge')) {
-    $meta = array(
-      '#tag' => 'meta',
-      '#attributes' => array(
-        'http-equiv' => 'X-UA-Compatible',
-        'content' => 'IE=edge, chrome=1',
-      ),
-    );
-
-    drupal_add_html_head($meta, 'root-chrome-edge');
+  // Send X-UA-Compatible HTTP header to force IE to use the most recent
+  // rendering engine or use Chrome's frame rendering engine if available.
+  // This also prevents the IE compatibility mode button to appear when using
+  // conditional classes on the html tag.
+  if (theme_get_setting('root_chrome_edge') && drupal_get_http_header('X-UA-Compatible') === NULL) {
+    drupal_add_http_header('X-UA-Compatible', 'IE=edge,chrome=1');
   }
 }
