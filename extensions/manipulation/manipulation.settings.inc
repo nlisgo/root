@@ -5,6 +5,8 @@
  * Contains the theme settings form elements for the development extension.
  */
 
+include_once dirname(__FILE__) . '/manipulation.inc';
+
 /**
  * Implements hook_extension_EXTENSION_theme_settings_form_alter().
  */
@@ -21,6 +23,7 @@ function root_extension_manipulation_theme_settings_form_alter($element, &$form,
     '#description' => t("Enter one class rule per line."),
     // The rules are stored in an array.
     '#default_value' => implode("\n", (array) theme_get_setting('root_class_rules')),
+    '#element_validate' => array('root_class_rules_element_validate'),
   );
 
   $element['root_manipulate_css']['root_css_exclude'] = array(
@@ -62,5 +65,23 @@ function root_extension_manipulation_theme_settings_form_submit($form, &$form_st
   foreach (array('root_css_exclude', 'root_js_exclude', 'root_class_rules') as $item) {
     $exclude = array_filter(array_map('trim', explode("\n", $values[$item])));
     form_set_value(array('#parents' => array($item)), $exclude, $form_state);
+  }
+}
+
+/**
+ * Validation callback for the CSS class rules form element.
+ */
+function root_class_rules_element_validate($element, &$form_state) {
+  $values = array_filter(array_map('trim', explode("\n", $element['#value'])));
+
+  foreach ($values as $rule) {
+    if (!preg_match('/^(\+|-)([a-z_]+)(:([a-z_])*)?\[(([a-z\-]+|(\*(?!\*))|\[[a-zA-Z0-9_# ]+(:[a-zA-Z0-9_# ]+)*\])+)\]$/', $rule, $matches)) {
+      // The class rule doesn't match the regex pattern.
+      form_error($element, t('At least one of te provided class rules is invalid: @rule.', array('@rule' => $rule)), $form_state);
+    }
+    elseif ($matches[1] == '+' && strpos($rule, '*') !== FALSE) {
+      // 'Add' rules don't support wildcards of course.
+      form_error($element, t("Wildcards (asterix characters) are not supported by 'add' (+) rules: @rule.", array('@rule' => $rule)), $form_state);
+    }
   }
 }

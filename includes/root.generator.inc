@@ -6,29 +6,6 @@
  */
 
 /**
- * Retrieves all themes that can be used as base themes for generating
- * subthemes. All non-starterkit themes that are based on 'root', as well as
- * 'root' itself, are considered viable base themes.
- *
- * @return array
- *   An array of theme names keyed with the machine-readable name of each theme.
- */
-function root_generator_base_themes() {
-  $themes = list_themes();
-  // Root itself is always a possible option ...
-  $options = array('root' => $themes['root']->info['name']);
-
-  foreach ($themes as $theme) {
-    // ... As well as all Root based themes that are not starterkits.
-    if (isset($theme->info['base theme']) && array_key_exists('root', system_find_base_themes($themes, $theme->name)) && empty($theme->info['starterkit'])) {
-      $options[$theme->name] = $theme->info['name'];
-    }
-  }
-
-  return $options;
-}
-
-/**
  * Retrieves all themes that can be used as starterkits for a given base theme.
  *
  * @param $base
@@ -46,7 +23,7 @@ function root_generator_starterkits($base = NULL) {
 
     // A starterkit is always flagged as such in the .info file.
     if (!empty($info['starterkit']) && isset($info['base theme']) && (!isset($base) || $info['base theme'] == $base)) {
-      $options[$name] = $info['name'] . '<div class="description">' . $info['description'] . '</div>';
+      $options[$name] = $info['name'] . ': ' . $info['description'];
     }
   }
 
@@ -116,19 +93,19 @@ function root_generator_move($source, $destination) {
  * @param $path
  *   The path to rewrite all files in.
  * @param $search
- *   The string to look for when replacing the file names and contents.
+ *   The string(s) to look for when replacing the file names and contents. Can
+ *   be an array or a string.
  * @param $replace
- *   The string to replace $search with (file contents).
- * @param $rename
- *   The string to replace $search with (file names).
+ *   The string(s) to replace $search with. Can be an array or a string.
  *
  * @return bool
  *   TRUE if the operation succeeded, FALSE otherwise.
  *
  * @see root_generator_replace_contents()
+ * @see str_replace()
  */
-function root_generator_rewrite_recursive($path, $search, $replace, $rename) {
-  if ($path !== ($new = str_replace($search, $rename, $path))) {
+function root_generator_rewrite_recursive($path, $search, $replace) {
+  if ($path !== ($new = str_replace($search, $replace, $path))) {
     // First, try to rename (move) the file if the name was changed.
     if (!$path = file_unmanaged_move($path, $new, FILE_EXISTS_REPLACE)) {
       return FALSE;
@@ -141,7 +118,7 @@ function root_generator_rewrite_recursive($path, $search, $replace, $rename) {
 
     while (FALSE !== ($read = $directory->read())) {
       if ($read != '.' && $read != '..' ) {
-        if (!root_generator_rewrite_recursive($path . '/' . $read, $search, $replace, $rename)) {
+        if (!root_generator_rewrite_recursive($path . '/' . $read, $search, $replace)) {
           return FALSE;
         }
       }
@@ -150,6 +127,7 @@ function root_generator_rewrite_recursive($path, $search, $replace, $rename) {
     $directory->close();
   }
   else {
+    // If it is a file, try to replace its the contents.
     root_generator_replace_contents($path, $search, $replace);
   }
 
@@ -162,13 +140,17 @@ function root_generator_rewrite_recursive($path, $search, $replace, $rename) {
  * @param $file
  *   The file to replace all occurrences of $search in.
  * @param $search
- *   The string to look for when replacing the file contents.
+ *   The string(s) to look for when replacing the file contents. Can be an array
+ *   or a string.
  * @param $replace
- *   The string to replace $search with (file contents).
+ *   The string(s) to replace $search with (file contents). Can be an array or
+ *   a string.
  * @param $regex
  *   (Optional) Whether $search is a regex pattern. Defaults to FALSE.
-
+ *
  * @see root_generator_rewrite_recursive()
+ * @see str_replace()
+ * @see preg_replace()
  */
 function root_generator_replace_contents($file, $search, $replace, $regex = FALSE) {
   // Make sure we don't choke on anything that is not a file. Also, it doesn't
@@ -188,18 +170,37 @@ function root_generator_replace_contents($file, $search, $replace, $regex = FALS
 }
 
 /**
- * @todo
+ * Recursively builds an .info file structure from an array.
+ *
+ * @param $array
+ *   The array to build the .info file from.
+ * @param $prefix
+ *   (Optional) Used internally to forward the current prefix (level of nesting)
+ *   for the keys.
+ *
+ * @return string
+ *   A .info file string.
  */
 function root_generator_build_info_file($array, $prefix = FALSE) {
   $info = '';
 
   foreach ($array as $key => $value) {
     if (is_array($value)) {
+      // This is an array, let's proceed with the next level.
       $info .= root_generator_build_info_file($value, (!$prefix ? $key : "{$prefix}[{$key}]"));
     }
     else {
+      // Escape all single quotes.
+      $value = str_replace("'", "\'", $value);
+      // Wrap the value in single quotes if it has any trailing or leading
+      // whitespace.
+      $value = trim($value) != $value ? "'" . $value . "'" : $value;
+      // If the key is numeric remove it entirely (simple brackets are enough in
+      // this case).
+      $key = is_numeric($key) ? '' : $key;
+
       $info .= $prefix ? ("{$prefix}[" . $key .']') : $key;
-      $info .= " = '" . str_replace("'", "\'", $value) . "'\n";
+      $info .= ' = ' . $value . "\n";
     }
   }
 
@@ -207,264 +208,208 @@ function root_generator_build_info_file($array, $prefix = FALSE) {
 }
 
 /**
- * @todo
+ * Helper function for creating and saving a .info file.
+ *
+ * @param $name
+ *   The name of the .info file (equivalent to the machine-readable name of the
+ *   theme that the .info file belongs to).
+ * @param $data
+ *   The content of the .info file.
+ * @param $destination
+ *   (Optional) The path in which the .info file should be saved. Defaults to
+ *   the path of the theme as defined by $name.
+ *
+ * @return bool
+ *   TRUE if the .info file was successfully saved, FALSE otherwise.
  */
-function root_generator_write_info_file($name, $info, $destination = NULL) {
+function root_generator_write_info_file($name, $data, $destination = NULL) {
   $destination = isset($destination) ? $destination : drupal_get_path('theme', $name);
 
   if (!empty($destination)) {
-    return file_unmanaged_save_data(root_generator_build_info_file($info), $destination . '/' . $name . '.info', FILE_EXISTS_REPLACE);
+    $data = is_array($data) ? root_generator_build_info_file($data) : $data;
+    return file_unmanaged_save_data($data, $destination . '/' . $name . '.info', FILE_EXISTS_REPLACE);
   }
 
   return FALSE;
 }
 
 /**
- * @todo
+ * Creates a subtheme from any given starterkit.
+ *
+ * @param $subtheme
+ *   An object containing all the required definitions for creating a subtheme.
+ *   The required properties are:
+ *     'name': The human-readable name of the subtheme.
+ *     'machine_name': The machine-readable name of the subtheme.
+ *     'path': The destination that the subtheme should be placed in relative to
+ *     the Drupal root.
+ *     'starterkit': The machine-readable name of the starterkit that should be
+ *     used for creating the subtheme.
+ *     'default': Whether the subtheme should be enabled and set as the default
+ *     theme after it has been created.
+ *     'enable': Whether the subtheme should be enabled after it has been
+ *     created.
+ *
+ * @return bool
+ *   TRUE if the subtheme could be successfully created, FALSE otherwise.
  */
-function root_generator_subtheme_create(&$subtheme) {
+function root_generator_subtheme_create($subtheme) {
+  // Check whether the destination path does not exist and bail out if it does
+  // so we don't delete any important data by accident.
   if (is_dir($subtheme->path)) {
-    file_unmanaged_delete_recursive($subtheme->path);
-  }
-
-  if (!file_prepare_directory($subtheme->path, FILE_CREATE_DIRECTORY)) {
-    drupal_set_message(t('Omega Tools could not create the directory %dir.', array('%dir' => $subtheme->path)), 'error');
-    watchdog('Omega Tools', t('Omega Tools could not create the directory %dir.', array('%dir' => $subtheme->path)), array(), WATCHDOG_ERROR);
-
+    watchdog('Root Generator', t('The path @path aready exists.', array('@path' => $subtheme->path)), array(), WATCHDOG_ERROR);
     return FALSE;
   }
 
-  if ($subtheme->starterkit) {
-    if (!root_generator_copy_recursive(drupal_get_path('theme', $subtheme->starterkit), $subtheme->path)) {
-      $themes = list_themes();
-
-      drupal_set_message(t('Omega Tools could not copy the starterkit %starterkit.', array('%starterkit' => $themes[$subtheme->starterkit]->info['name'])), 'error');
-      watchdog('Omega Tools', t('Omega Tools could not copy the starterkit %starterkit.', array('%starterkit' => $themes[$subtheme->starterkit]->info['name'])), array(), WATCHDOG_ERROR);
-
-      return FALSE;
-    }
-
-    $subtheme->info = drupal_parse_info_file($subtheme->path . '/' . $subtheme->starterkit . '.info');
-
-    file_unmanaged_delete($subtheme->path . '/' . $subtheme->starterkit . '.info');
-  }
-  else {
-    if (!root_generator_copy_recursive(drupal_get_path('module', 'root_generator') . '/default', $subtheme->path)) {
-      drupal_set_message(t('Omega Tools could not copy the default pattern.'), 'error');
-      watchdog('Omega Tools', t('Omega Tools could not copy the default pattern.'), array(), WATCHDOG_ERROR);
-
-      return FALSE;
-    }
-
-    $base = drupal_parse_info_file(drupal_get_path('theme', $subtheme->base) . '/' . $subtheme->base . '.info');
-    $subtheme->info = drupal_parse_info_file($subtheme->path . '/default.pattern');
-    $subtheme->info['regions'] = isset($base['regions']) ? $base['regions'] : array();
-    $subtheme->info['zones'] = isset($base['zones']) ? $base['zones'] : array();
-    $subtheme->info['settings'] = isset($base['settings']) ? $base['settings'] : array();
-
-    file_unmanaged_delete($subtheme->path . '/default.pattern');
+  // Try to prepare the destination directory for the new subtheme.
+  if (!file_prepare_directory($subtheme->path, FILE_CREATE_DIRECTORY)) {
+    watchdog('Root Generator', t('The Root subtheme generator was not able to create the directory @dir.', array('@dir' => $subtheme->path)), array(), WATCHDOG_ERROR);
+    return FALSE;
   }
 
+  $themes = list_themes();
+  // Try to copy the starterkit to the destination path of the new subtheme.
+  $source = drupal_get_path('theme', $subtheme->starterkit);
+  if (!root_generator_copy_recursive($source, $subtheme->path)) {
+    watchdog('Root Generator', t('The Root subtheme generator was not able to copy the starterkit @starterkit.', array('@starterkit' => $themes[$subtheme->starterkit]->info['name'])), array(), WATCHDOG_ERROR);
+    return FALSE;
+  }
+
+  // Recursively rewrite the file names and contents of all the files that are
+  // now in the subtheme's directory to represent the human- and
+  // machine-readable names of the subtheme.
+  root_generator_rewrite_recursive($subtheme->path, array($subtheme->starterkit, $themes[$subtheme->starterkit]->info['name']), array($subtheme->machine_name, $subtheme->name));
+
+  // Parse the contents of the current .info file (provided by the starterkit).
+  $subtheme->info = drupal_parse_info_file($subtheme->path . '/' . $subtheme->machine_name . '.info');
+
+  // Unset all unneeded (and potentially hindering) properties in the .info file
+  // of the subtheme.
   unset($subtheme->info['starterkit'], $subtheme->info['hidden'], $subtheme->info['locked'], $subtheme->info['project'], $subtheme->info['datestamp']);
 
+  // Put the name and description, as well as a 'dummy' version for the new
+  // subtheme in place.
   $subtheme->info['name'] = $subtheme->name;
-  $subtheme->info['description'] = '';
-  $subtheme->info['base theme'] = $subtheme->base;
-  $subtheme->info['engine'] = 'phptemplate';
-  $subtheme->info['core'] = DRUPAL_CORE_COMPATIBILITY;
+  $subtheme->info['description'] = $subtheme->description;
   $subtheme->info['version'] = '1.x';
-  $subtheme->info['screenshot'] = 'screenshot.png';
-  $subtheme->info['regions'] = array_merge(_root_generator_core_regions(), $subtheme->info['regions']);
-  $subtheme->info['zones'] = array_merge(_root_generator_default_zones(), $subtheme->info['zones']);
 
+  // Overwrite the existing .info file with the changed values.
   root_generator_write_info_file($subtheme->machine_name, $subtheme->info, $subtheme->path);
-  root_generator_rewrite_recursive($subtheme->path, 'YOURTHEME', $subtheme->machine_name, str_replace('_', '-', $subtheme->machine_name));
 
-  drupal_set_message(t('You have successfully created the theme %name.', array('%name' => $subtheme->name)));
+  // Rebuild the theme caches so that we can do some final tasks.
+  drupal_theme_rebuild();
+  system_rebuild_theme_data();
+
+  if (!empty($subtheme->enable) || !empty($subtheme->default)) {
+    // Enable the subtheme.
+    theme_enable(array($subtheme->machine_name));
+
+    if (!empty($subtheme->default)) {
+      // Make the newly created subtheme the default theme.
+      variable_set('theme_default', $subtheme->machine_name);
+    }
+  }
 
   return TRUE;
 }
 
 /**
- * @todo
- */
-function root_generator_subtheme_process($subtheme) {
-  drupal_theme_rebuild();
-  system_rebuild_theme_data();
-
-  if ($subtheme->status) {
-    theme_enable(array($subtheme->machine_name));
-
-    if ($subtheme->default) {
-      variable_set('theme_default', $subtheme->machine_name);
-      drupal_set_message(t('%name is now the default theme.', array('%name' => $subtheme->name)));
-    }
-  }
-  else {
-    theme_disable(array($subtheme->machine_name));
-  }
-}
-
-/**
- * @todo
+ * Retrieve an array of available sites from the sites.php.
+ *
+ * @return
+ *   An array that contains all the available sites in a multisite environment.
  */
 function root_generator_sites() {
-  $sites = &drupal_static(__FUNCTION__);
+  $sites = array();
 
-  if (!isset($sites)) {
-    $sites = array();
-
-    if (file_exists(DRUPAL_ROOT . '/sites/sites.php')) {
-      include(DRUPAL_ROOT . '/sites/sites.php');
-    }
-
-    $sites = array('all') + array_values($sites);
+  // Load the available sites (multisite installation) from the sites.php file
+  // if it exists.
+  if (file_exists(DRUPAL_ROOT . '/sites/sites.php')) {
+    include DRUPAL_ROOT . '/sites/sites.php';
   }
 
-  return $sites;
+  // The 'all' destination is always available.
+  return array('all') + array_values($sites);
 }
 
 /**
- * @todo
- */
-function root_generator_sites_options() {
-  $options = array();
-
-  if ($sites = root_generator_sites()) {
-    $options += array_combine($sites, $sites);
-  }
-
-  $options['all'] = t('Default destination (all)');
-
-  return $options;
-}
-
-/**
- * @todo
- */
-function root_generator_write_archive($source, $name, $destination = NULL) {
-  $destination = isset($destination) ? $destination : 'temporary://root';
-
-  if (!file_prepare_directory($destination, FILE_CREATE_DIRECTORY)) {
-    drupal_set_message(t('Root could not create the directory %dir', array('%dir' => $destination)), 'error');
-    watchdog('Root', t('Root could not create the directory %dir', array('%dir' => $destination)), array(), WATCHDOG_ERROR);
-
-    return FALSE;
-  }
-
-  $destination = $destination . '/' . $name . '.tar';
-  $current = getcwd();
-
-  chdir(drupal_realpath(dirname($source)));
-
-  $archiver = new Archive_Tar(drupal_realpath($destination));
-  $archiver->create(basename(rtrim($source, '/')));
-
-  chdir($current);
-
-  return $destination;
-}
-
-/**
- * @todo
+ * Delete the theme settings that have been stored in the database and thereby
+ * reverts them to the default settings from the .info file.
+ *
+ * @param $name
+ *   The machine-readable name of a theme.
  */
 function root_generator_revert_theme_settings($theme) {
   $themes = list_themes();
 
-  variable_del('theme_' . $theme . '_settings');
+  if (isset($themes[$theme])) {
+    // Delete the theme settings variable for the given theme.
+    variable_del('theme_' . $theme . '_settings');
 
-  drupal_theme_rebuild();
-  system_rebuild_theme_data();
+    // Rebuild the theme data for good measure.
+    drupal_theme_rebuild();
+    system_rebuild_theme_data();
 
-  watchdog('theme', t('Theme settings for %theme reset to default values.', array('%theme' => $themes[$theme]->info['name'])));
-  drupal_set_message(t('The theme settings for %theme have been purged from the database and are now being loaded from the .info file of this theme.', array('%theme' => $themes[$theme]->info['name'])));
+    watchdog('theme', t('The theme settings for the %theme the have been reset to their default values.', array('%theme' => $themes[$theme]->info['name'])));
+    return TRUE;
+  }
+
+  return FALSE;
 }
 
 /**
- * @todo
+ * Delete the theme settings that have been stored in the database and thereby
+ * reverts them to the default settings from the .info file.
+ *
+ * @param $name
+ *   The machine-readable name of a theme.
  */
-function _root_generator_theme_exists($theme) {
+function root_generator_export_theme_settings($theme) {
   $themes = list_themes();
 
-  return isset($themes[$theme]);
-}
+  if (isset($themes[$theme])) {
+    // Parse the current content of the .info file so we can append the settings
+    // from the database.
+    $path = drupal_get_path('theme', $theme) . '/' . $theme . '.info';
+    $info = drupal_parse_info_file($path);
 
-/**
- * @todo
- */
-function _root_generator_validate_theme_name($element, &$form_state) {
-  system_rebuild_theme_data();
+    // Remove the old theme settings from the .info file.
+    unset($info['settings']);
 
-  if (!preg_match('/^[a-z][a-z0-9_]*$/', $element['#value'])) {
-    form_error($element, t('The theme name is invalid. It may only contain lowercase numbers, letters and underscores and must start with a letter.'));
-  }
-  else if (_root_generator_theme_exists($element['#value'])) {
-    form_error($element, t('A theme with that name already exists. The machine-readable name must be unique.'));
-  }
-}
-
-/**
- * @todo
- */
-function _root_generator_validate_theme_settings($element, &$form_state) {
-  $settings = drupal_parse_info_format($element['#value']);
-
-  foreach ($settings as $key => $value) {
-    if ($key !== 'settings') {
-      form_error($element, t('You may only submit theme settings with this form.'));
+    // Insert the theme settings from the database.
+    if ($settings = variable_get('theme_' . $theme . '_settings')) {
+      $info['settings'] = $settings;
     }
-  }
-}
 
-/**
- * @todo
- */
-function _root_generator_transform_theme_name($name) {
-  $name = preg_replace('/^[^a-z]+/', '', strtolower($name));
-  $name = preg_replace('/[^a-z0-9_]+/', '_', $name);
-  $name = str_replace('__', '_', $name);
-  $name = trim($name, '_');
-
-  return $name;
-}
-
-/**
- * @todo
- */
-function _root_generator_theme_access($theme) {
-  if ($theme && user_access('administer themes')) {
-    $themes = list_themes();
-
-    if (!isset($themes[$theme->name]) || _root_generator_is_editable($theme->name)) {
+    // Write the data to the .info file of the theme.
+    if (root_generator_write_info_file($theme, $info)) {
+      watchdog('theme', t('The theme settings for the %theme theme have been exported to the .info file of the theme.', array('%theme' => $themes[$theme]->info['name'])));
       return TRUE;
     }
+
+    watchdog('theme', t('There was an error while trying to export the theme settings for the %theme theme.', array('%theme' => $themes[$theme]->info['name'])));
   }
 
   return FALSE;
 }
 
 /**
- * @todo
+ * Helper function for generating a valid machine-readable name for a theme from
+ * any string.
+ *
+ * @param $name
+ *   The string to generate the machine-readable name from.
+ *
+ * @return string
+ *   The generated machine-readable name.
  */
-function _root_generator_is_starterkit($theme) {
-  return array_key_exists($theme, root_generator_starterkits());
-}
+function _root_generator_generate_theme_name($string) {
+  // Machine-readable names have to start with a lowercase letter.
+  $string = preg_replace('/^[^a-z]+/', '', strtolower($string));
+  // Machine-readable may only contain alphanumeric characters and underscores.
+  $string = preg_replace('/[^a-z0-9_]+/', '_', $string);
+  // Trim all trailing and leading underscores.
+  $string = trim($string, '_');
 
-/**
- * @todo
- */
-function _root_generator_is_editable($theme) {
-  $themes = list_themes();
-
-  if (!in_array($theme, array('omega', 'alpha')) && strpos(drupal_get_path('theme', $theme), 'themes') !== 0) {
-    if (isset($themes[$theme]->info['base theme'])) {
-      $base = system_find_base_themes($themes, $theme);
-
-      if (!empty($base) && isset($base['alpha']) && empty($themes[$theme]->info['locked'])) {
-        return TRUE;
-      }
-    }
-  }
-
-  return FALSE;
+  return $string;
 }

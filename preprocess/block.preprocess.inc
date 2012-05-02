@@ -29,16 +29,19 @@ function root_preprocess_block(&$variables) {
         case 'main':
           // Note: the "main" role goes in the page.tpl, not here.
           break;
+
         case 'help':
         case 'powered-by':
           $variables['attributes_array']['role'] = 'complementary';
           break;
+
         default:
           // Any other "system" block is a menu block.
           $variables['attributes_array']['role'] = 'navigation';
           break;
       }
       break;
+
     case 'menu':
     case 'menu_block':
     case 'blog':
@@ -49,9 +52,11 @@ function root_preprocess_block(&$variables) {
     case 'statistics':
       $variables['attributes_array']['role'] = 'navigation';
       break;
+
     case 'search':
       $variables['attributes_array']['role'] = 'search';
       break;
+
     case 'help':
     case 'aggregator':
     case 'locale':
@@ -59,21 +64,25 @@ function root_preprocess_block(&$variables) {
     case 'profile':
       $variables['attributes_array']['role'] = 'complementary';
       break;
+
     case 'node':
       switch ($variables['block']->delta) {
         case 'syndicate':
           $variables['attributes_array']['role'] = 'complementary';
           break;
+
         case 'recent':
           $variables['attributes_array']['role'] = 'navigation';
           break;
       }
       break;
+
     case 'user':
       switch ($variables['block']->delta) {
         case 'login':
           $variables['attributes_array']['role'] = 'form';
           break;
+
         case 'new':
         case 'online':
           $variables['attributes_array']['role'] = 'complementary';

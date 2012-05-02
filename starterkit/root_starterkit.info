@@ -1,9 +1,11 @@
-name = Root
-description = Root
+name = Default Root Starterkit
+description = Default starterkit for the Root base theme.
 screenshot = screenshot.png
 engine = phptemplate
 core = 7.x
-base theme = bartik
+base theme = root
+starterkit = TRUE
+hidden = TRUE
 
 features[] = logo
 features[] = favicon

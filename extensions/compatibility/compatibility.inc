@@ -37,8 +37,6 @@ function root_extension_compatibility_preprocess_html(&$variables) {
 
   // Send X-UA-Compatible HTTP header to force IE to use the most recent
   // rendering engine or use Chrome's frame rendering engine if available.
-  // This also prevents the IE compatibility mode button to appear when using
-  // conditional classes on the html tag.
   if (theme_get_setting('root_chrome_edge') && drupal_get_http_header('X-UA-Compatible') === NULL) {
     drupal_add_http_header('X-UA-Compatible', 'IE=edge,chrome=1');
   }

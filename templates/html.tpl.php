@@ -42,13 +42,13 @@
  */
 ?><!DOCTYPE html>
 <?php if (root_extension_is_enabled('compatibility') && theme_get_setting('root_conditional_comments_html')): ?>
-  <!--[if IEMobile 7]><html class="no-js iem7"<?php print $attributes; ?>><![endif]-->
-  <!--[if lte IE 6]><html class="no-js lt-ie9 lt-ie8 lt-ie7"<?php print $attributes; ?>><![endif]-->
-  <!--[if (IE 7)&(!IEMobile)]><html class="no-js lt-ie9 lt-ie8"<?php print $attributes; ?>><![endif]-->
-  <!--[if IE 8]><html class="no-js lt-ie9"<?php print $attributes; ?>><![endif]-->
-  <!--[if (gte IE 9)|(gt IEMobile 7)]><!--><html class="no-js"<?php print $attributes ?> <?php print $rdf_namespaces; ?>><!--<![endif]-->
+  <!--[if IEMobile 7]><html class="iem7"<?php print $attributes; ?>><![endif]-->
+  <!--[if lte IE 6]><html class="lt-ie9 lt-ie8 lt-ie7"<?php print $attributes; ?>><![endif]-->
+  <!--[if (IE 7)&(!IEMobile)]><html class="lt-ie9 lt-ie8"<?php print $attributes; ?>><![endif]-->
+  <!--[if IE 8]><html class="lt-ie9"<?php print $attributes; ?>><![endif]-->
+  <!--[if (gte IE 9)|(gt IEMobile 7)]><!--><html<?php print $attributes ?> <?php print $rdf_namespaces; ?>><!--<![endif]-->
 <?php else: ?>
-  <html class="no-js" xmlns="http://www.w3.org/1999/xhtml" xml:lang="<?php print $language->language; ?>" version="XHTML+RDFa 1.0" dir="<?php print $language->dir; ?>" <?php print $rdf_namespaces; ?>>
+  <html<?php print $attributes ?> <?php print $rdf_namespaces; ?>>
 <?php endif; ?>
 <head profile="<?php print $grddl_profile; ?>">
   <title><?php print $head_title; ?></title>
