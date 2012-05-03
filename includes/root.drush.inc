@@ -5,6 +5,8 @@
  * Please supply a file description.
  */
 
+require_once dirname(__FILE__) . '/root.generator.inc';
+
 /**
  * Implements hook_drush_command().
  */
