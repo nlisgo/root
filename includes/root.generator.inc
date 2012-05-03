@@ -132,47 +132,16 @@ function root_generator_rewrite_recursive($path, $search, $replace) {
   }
   elseif (is_file($path)) {
     // If it is a file, try to replace its the contents.
-    if (!root_generator_replace_contents($path, $search, $replace)) {
-      return FALSE;
+    $before = file_get_contents($path);
+
+    if ($before !== ($after = str_replace($search, $replace, $before))) {
+      if (file_unmanaged_save_data($after, $path, FILE_EXISTS_REPLACE)) {
+        return FALSE;
+      }
     }
   }
 
   return TRUE;
-}
-
-/**
- * Replaces all occurrences of a given string in a given file.
- *
- * @param $file
- *   The file to replace all occurrences of $search in.
- * @param $search
- *   The string(s) to look for when replacing the file contents. Can be an array
- *   or a string.
- * @param $replace
- *   The string(s) to replace $search with (file contents). Can be an array or
- *   a string.
- * @param $regex
- *   (Optional) Whether $search is a regex pattern. Defaults to FALSE.
- *
- * @see root_generator_rewrite_recursive()
- * @see str_replace()
- * @see preg_replace()
- */
-function root_generator_replace_contents($file, $search, $replace, $regex = FALSE) {
-  // Make sure we don't choke on anything that is not a file. Also, it doesn't
-  // make sense to load the file contents of an empty file.
-  if (is_file($file) && filesize($file) > 0) {
-    $before = file_get_contents($file);
-
-    // Use preg_replace() if the given $search string is a regex pattern.
-    if ($regex && $before != ($after = preg_replace($search, $replace, $before))) {
-      file_unmanaged_save_data($after, $file, FILE_EXISTS_REPLACE);
-    }
-    // Otherwise simply use str_replace().
-    elseif (!$regex && $before != ($after = str_replace($search, $replace, $before))) {
-      file_unmanaged_save_data($after, $file, FILE_EXISTS_REPLACE);
-    }
-  }
 }
 
 /**
@@ -289,7 +258,6 @@ function root_generator_subtheme_create($subtheme) {
 
   // Parse the contents of the current .info file (provided by the starterkit).
   $subtheme->info = drupal_parse_info_file($subtheme->path . '/' . $subtheme->machine_name . '.info');
-
   // Unset all unneeded (and potentially hindering) properties in the .info file
   // of the subtheme.
   unset($subtheme->info['starterkit'], $subtheme->info['hidden'], $subtheme->info['locked'], $subtheme->info['project'], $subtheme->info['datestamp']);
