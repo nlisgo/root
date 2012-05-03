@@ -164,8 +164,9 @@ function drush_root_export($theme) {
 
       if (drush_get_option('revert')) {
         // Revert the theme settings if the 'revert' option is set and they have
-        // been exported successfully.
-        drush_root_revert($theme);
+        // been exported successfully. In this case, we invoke the API function
+        // through the drush command to get the  print messages displazed.
+        drush_op('drush_root_revert');
       }
     }
     else {
