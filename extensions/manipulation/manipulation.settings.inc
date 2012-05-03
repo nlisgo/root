@@ -37,6 +37,8 @@ function root_extension_manipulation_theme_settings_form_alter($element, &$form,
   $element['root_manipulate_js'] = array(
     '#type' => 'fieldset',
     '#title' => t('Manipulate JavasSript files'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
   );
 
   $element['root_manipulate_js']['root_js_exclude'] = array(
@@ -45,8 +47,6 @@ function root_extension_manipulation_theme_settings_form_alter($element, &$form,
     '#description' => t("Enter one file per line. The '*' character is a wildcard. Each path is relative to a module, theme, profile, theme engine or the 'misc' folder."),
     // The paths are stored in an array.
     '#default_value' => implode("\n", (array) theme_get_setting('root_js_exclude')),
-    '#collapsible' => TRUE,
-    '#collapsed' => TRUE,
   );
 
   // We need a custom submit handler to store the CSS and JS paths as arrays.

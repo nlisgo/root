@@ -171,24 +171,77 @@ function root_html_head_alter(&$head) {
 /**
  * Implements hook_root_libraries_info().
  */
-function root_root_libraries_info() {
-  // Use the libraries module to identify the path of the library if it is
-  // enabled. Otherwise just default to sites/all/libraries.
-  $path = module_exists('libraries') ? libraries_get_path('selectivizr') : 'sites/all/libraries/selectivizr/selectivizr.js';
+function root_root_libraries_info($theme = NULL) {
+  $theme = isset($theme) ? $theme : $GLOBALS['theme_key'];
+
   $libraries['selectivizr'] = array(
     'label' => t('Selectivizr'),
     'description' => t('Selectivizr is a JavaScript utility that emulates CSS3 pseudo-classes and attribute selectors in Internet Explorer 6-8. Simply include the script in your pages and selectivizr will do the rest.'),
     'author' => 'Keith Clark',
     'website' => 'http://selectivizr.com/',
-    'js' => array($path),
+    // With our drush integration we can automatically download all our library
+    // files that have a download path registered.
+    'download link' => array(
+      'https://raw.github.com/keithclark/selectivizr/master/selectivizr.js',
+    ),
+    // This is actually the default. We just list it here for documentation
+    // purposes.
+    'include callback' => 'root_library_default_include_callback',
+    // This is the path that the file resides in and is not actually part
+    // of the options array that is later passed to drupal_add_js(). This
+    // is also not really required as the Root base theme uses the
+    // library module path via libraries_get_path() (with a fallback for
+    // the theme directory) by default. However, for documentation
+    // purposes, we will just leave this here.
+    'path' => module_exists('libraries') ? libraries_get_path('selectivizr') : drupal_get_path('theme', $theme) . '/libraries/selectivizr',
+    'library' => array(
+      'js' => array(
+        'selectivizr.js' => array(
+          // Only load Selectivizr for Internet Explorer > 6 and < 8.
+          'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
+          // Selectivizr shouldn't be preprocessed (aggregated).
+          'preprocess' => FALSE,
+          'group' => JS_LIBRARY,
+          'weight' => -100,
+        ),
+      )
+    ),
   );
+
+  $libraries['respond'] = array(
+    'label' => t('Respond'),
+    'description' => t('Respond is a fast & lightweight polyfill for min/max-width CSS3 Media Queries (for IE 6-8, and more).'),
+    'author' => 'Scott Jehl',
+    'website' => 'http://scottjehl.com/',
+    'download' => array(
+      'https://raw.github.com/scottjehl/Respond/master/respond.src.js',
+      'https://raw.github.com/scottjehl/Respond/master/respond.min.js',
+    ),
+    'library' => array(
+      'js' => array(
+        'respond.src.js' => array(
+          'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
+          'preprocess' => FALSE,
+          'group' => JS_LIBRARY,
+          'weight' => -90,
+          'minified' => 'respond.min.js',
+        ),
+      ),
+    ),
+  );
+
 
   $libraries['pie'] = array(
     'label' => t('CSS3 PIE'),
     'description' => t('PIE makes Internet Explorer 6-9 capable of rendering several of the most useful CSS3 decoration features.'),
     'author' => 'Keith Clark',
     'website' => 'http://css3pie.com/',
-    'include callback' => 'root_pie_include',
+    // The pie library is completely different to all other libraries in how it
+    // is loaded (different inclusion types, etc.) so we just handle it with a
+    // custom 'include callback'. We can't really download it automatically
+    // either because (as of writing this) there is no hosted, uncompressed
+    // built lying around anywhere publicly.
+    'include callback' => 'root_pie_include_callback',
   );
 
   return $libraries;
@@ -240,28 +293,4 @@ function root_library_options_form($element, &$form, $form_state, $library, $inf
   }
 
   return $element;
-}
-
-/**
- * Include callback for the CSS3PIE library.
- */
-function root_pie_include($library, $info) {
-  $file = theme_get_setting('root_library_pie_inclusion');
-
-  // Include the library depending on the inclusion method setting.
-  switch ($file) {
-    case 'pie.js':
-      $path = drupal_get_path('theme', $GLOBALS['theme_key']) . '/libraries/pie/' . $file;
-      drupal_add_js($path, array('group' => JS_THEME, 'browsers' => array()));
-      break;
-
-    case 'pie.htc':
-    case 'pie.php':
-    default:
-      $path = file_create_url('public://root/' . $GLOBALS['theme_key'] . '-pie-selectors.css');
-      if (is_file($path)) {
-        drupal_add_css($path, array('group' => CSS_THEME));
-        break;
-      }
-  }
 }

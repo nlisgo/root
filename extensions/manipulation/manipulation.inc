@@ -18,7 +18,7 @@ function root_extension_manipulation_theme_registry_alter(&$registry) {
         // Only proceed if the hook that this rule is targeted at exists.
         if (isset($registry[$rule['hook']])) {
           // Store the class rule in the registry for this hook.
-          $registry[$rule['hook']]['class rules'][] = $rule;
+          $registry[$rule['hook']]['root class rules'][] = $rule;
 
           // Make sure that we don't add the hook multiple times.
           if (!array_search('root_apply_class_rules', $registry[$rule['hook']]['preprocess functions'])) {
@@ -113,8 +113,8 @@ function root_apply_class_rules(&$variables, $hook) {
 
   // This hook should only get invoked if the 'class rules' property has at
   // least one rule in it. This check is just for good measure.
-  if (!empty($registry[$hook]['class rules'])) {
-    foreach ($registry[$hook]['class rules'] as $rule) {
+  if (!empty($registry[$hook]['root class rules'])) {
+    foreach ($registry[$hook]['root class rules'] as $rule) {
       $property = ($rule['subtype'] ? $rule['subtype'] . '_' : '') . 'attributes_array';
 
       if (!isset($variables[$property]) || ($rule['action'] == 'remove' && empty($variables[$property]['class']))) {
