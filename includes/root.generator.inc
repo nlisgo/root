@@ -16,14 +16,15 @@
  *   An array of theme names keyed with the machine-readable name of each theme.
  */
 function root_generator_starterkits($base = NULL) {
-  // Retrieve all the possible base themes.
   $options = array();
+
+  // Retrieve all the possible starterkits.
   foreach (list_themes() as $name => $theme) {
     $info = $theme->info;
 
     // A starterkit is always flagged as such in the .info file.
-    if (!empty($info['starterkit']) && isset($info['base theme']) && (!isset($base) || $info['base theme'] == $base)) {
-      $options[$name] = $info['name'] . ': ' . $info['description'];
+    if (!empty($info['starterkit']) && !empty($info['base theme']) && (!isset($base) || $info['base theme'] == $base)) {
+      $options[$name] = $info['name'] . (!empty($info['description']) ? ': ' . $info['description'] : '');
     }
   }
 
@@ -44,6 +45,7 @@ function root_generator_starterkits($base = NULL) {
 function root_generator_copy_recursive($source, $destination) {
   if (is_dir($source)) {
     if (!file_prepare_directory($destination, FILE_CREATE_DIRECTORY)) {
+      watchdog('root', t('There was an error while trying to prepare a directory in @destination for copying over @source.', array('@destination' => $destination, '@source' => $source)));
       return FALSE;
     }
     $directory = dir($source);
@@ -79,9 +81,11 @@ function root_generator_copy_recursive($source, $destination) {
  */
 function root_generator_move($source, $destination) {
   if (root_generator_copy_recursive($source, $destination)) {
+    // Delete the files in the source path after they have been successfullly
+    // copied to their destination.
     file_unmanaged_delete_recursive($source);
 
-    return $destination;
+    return TRUE;
   }
 
   return FALSE;
@@ -126,9 +130,11 @@ function root_generator_rewrite_recursive($path, $search, $replace) {
 
     $directory->close();
   }
-  else {
+  elseif (is_file($path)) {
     // If it is a file, try to replace its the contents.
-    root_generator_replace_contents($path, $search, $replace);
+    if (!root_generator_replace_contents($path, $search, $replace)) {
+      return FALSE;
+    }
   }
 
   return TRUE;
@@ -238,17 +244,18 @@ function root_generator_write_info_file($name, $data, $destination = NULL) {
  *
  * @param $subtheme
  *   An object containing all the required definitions for creating a subtheme.
- *   The required properties are:
- *     'name': The human-readable name of the subtheme.
- *     'machine_name': The machine-readable name of the subtheme.
- *     'path': The destination that the subtheme should be placed in relative to
+ *   The available properties are:
+ *
+ *   - 'name': The human-readable name of the subtheme.
+ *   - 'machine_name': The machine-readable name of the subtheme.
+ *   - 'path': The destination that the subtheme should be placed in relative to
  *     the Drupal root.
- *     'starterkit': The machine-readable name of the starterkit that should be
+ *   - 'starterkit': The machine-readable name of the starterkit that should be
  *     used for creating the subtheme.
- *     'default': Whether the subtheme should be enabled and set as the default
- *     theme after it has been created.
- *     'enable': Whether the subtheme should be enabled after it has been
- *     created.
+ *   - 'default': (optional) Whether the subtheme should be enabled and set as
+ *     the default theme after it has been created.
+ *   - 'enable': (ptional) Whether the subtheme should be enabled after it has
+ *     been created.
  *
  * @return bool
  *   TRUE if the subtheme could be successfully created, FALSE otherwise.
@@ -263,7 +270,7 @@ function root_generator_subtheme_create($subtheme) {
 
   // Try to prepare the destination directory for the new subtheme.
   if (!file_prepare_directory($subtheme->path, FILE_CREATE_DIRECTORY)) {
-    watchdog('Root Generator', t('The Root subtheme generator was not able to create the directory @dir.', array('@dir' => $subtheme->path)), array(), WATCHDOG_ERROR);
+    watchdog('root', t('The Root subtheme generator was not able to create the directory @dir.', array('@dir' => $subtheme->path)), array(), WATCHDOG_ERROR);
     return FALSE;
   }
 
@@ -271,7 +278,7 @@ function root_generator_subtheme_create($subtheme) {
   // Try to copy the starterkit to the destination path of the new subtheme.
   $source = drupal_get_path('theme', $subtheme->starterkit);
   if (!root_generator_copy_recursive($source, $subtheme->path)) {
-    watchdog('Root Generator', t('The Root subtheme generator was not able to copy the starterkit @starterkit.', array('@starterkit' => $themes[$subtheme->starterkit]->info['name'])), array(), WATCHDOG_ERROR);
+    watchdog('root', t('The Root subtheme generator was not able to copy the starterkit @starterkit.', array('@starterkit' => $themes[$subtheme->starterkit]->info['name'])), array(), WATCHDOG_ERROR);
     return FALSE;
   }
 
@@ -350,7 +357,7 @@ function root_generator_revert_theme_settings($theme) {
     drupal_theme_rebuild();
     system_rebuild_theme_data();
 
-    watchdog('theme', t('The theme settings for the %theme the have been reset to their default values.', array('%theme' => $themes[$theme]->info['name'])));
+    watchdog('root', t('The theme settings for the @theme the have been reset to their default values.', array('@theme' => $themes[$theme]->info['name'])));
     return TRUE;
   }
 
@@ -383,11 +390,11 @@ function root_generator_export_theme_settings($theme) {
 
     // Write the data to the .info file of the theme.
     if (root_generator_write_info_file($theme, $info)) {
-      watchdog('theme', t('The theme settings for the %theme theme have been exported to the .info file of the theme.', array('%theme' => $themes[$theme]->info['name'])));
+      watchdog('root', t('The theme settings for the @theme theme have been exported to the .info file of the theme.', array('@theme' => $themes[$theme]->info['name'])));
       return TRUE;
     }
 
-    watchdog('theme', t('There was an error while trying to export the theme settings for the %theme theme.', array('%theme' => $themes[$theme]->info['name'])));
+    watchdog('root', t('There was an error while trying to export the theme settings for the @theme theme.', array('@theme' => $themes[$theme]->info['name'])));
   }
 
   return FALSE;

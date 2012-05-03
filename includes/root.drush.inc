@@ -38,7 +38,7 @@ function root_drush_command() {
       'theme' => 'The machine-readable name of the theme to export the theme settings for.',
     ),
     'options' => array(
-      '--revert' => 'Purges the theme settings from the database after exporting them to the .info file.',
+      'revert' => 'Purges the theme settings from the database after exporting them to the .info file.',
     ),
     'examples' => array(
       'drush root-export foo' => 'Exports the theme settings of the "foo" theme to the "foo.info" file in that theme.',
@@ -155,9 +155,10 @@ function drush_root_export($theme) {
       drush_print(dt('The theme setings for the @theme theme have been successfully exported.', array('@theme' => $themes[$theme]->info['name'])));
 
       if (drush_get_option('revert')) {
-        // Revert the theme settings if the '--revert' option is set and they have
-        // been exported successfully.
-        root_generator_revert_theme_settings($theme);
+        // Revert the theme settings if the 'revert' option is set and they have
+        // been exported successfully. In this case, we invoke the API function
+        // through the drush command to get the  print messages displazed.
+        drush_op('revert');
       }
     }
     else {
