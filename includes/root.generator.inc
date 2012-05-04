@@ -168,8 +168,8 @@ function root_generator_build_info_file($array, $prefix = FALSE) {
       // Escape all single quotes.
       $value = str_replace("'", "\'", $value);
       // Wrap the value in single quotes if it has any trailing or leading
-      // whitespace.
-      $value = trim($value) != $value ? "'" . $value . "'" : $value;
+      // whitespace or it is an empty string from the start.
+      $value = $value === '' || trim($value) != $value ? "'" . $value . "'" : $value;
       // If the key is numeric remove it entirely (simple brackets are enough in
       // this case).
       $key = is_numeric($key) ? '' : $key;

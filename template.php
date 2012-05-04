@@ -181,8 +181,8 @@ function root_root_libraries_info($theme = NULL) {
     'website' => 'http://selectivizr.com/',
     // With our drush integration we can automatically download all our library
     // files that have a download path registered.
-    'download link' => array(
-      'https://raw.github.com/keithclark/selectivizr/master/selectivizr.js',
+    'download' => array(
+      'https://raw.github.com/keithclark/selectivizr/master/selectivizr.js' => 'selectivizr.js',
     ),
     // This is actually the default. We just list it here for documentation
     // purposes.
@@ -214,17 +214,16 @@ function root_root_libraries_info($theme = NULL) {
     'author' => 'Scott Jehl',
     'website' => 'http://scottjehl.com/',
     'download' => array(
-      'https://raw.github.com/scottjehl/Respond/master/respond.src.js',
-      'https://raw.github.com/scottjehl/Respond/master/respond.min.js',
+      'https://raw.github.com/scottjehl/Respond/master/respond.src.js' => 'respond.js',
+      'https://raw.github.com/scottjehl/Respond/master/respond.min.js' => 'respond.min.js',
     ),
     'library' => array(
       'js' => array(
-        'respond.src.js' => array(
+        'respond.js' => array(
           'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
           'preprocess' => FALSE,
           'group' => JS_LIBRARY,
           'weight' => -90,
-          'minified' => 'respond.min.js',
         ),
       ),
     ),

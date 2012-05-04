@@ -15,7 +15,7 @@ function root_extension_libraries_theme_settings_form_alter($element, &$form, $f
   foreach (root_invoke_all('root_libraries_info') as $library => $info) {
     $libraries['root_library_' . $library] = array(
       '#type' => 'checkbox',
-      '#title' => $info['label'],
+      '#title' => t('@library by <a href="!url">@author</a>', array('@library' => $info['label'], '!url' => $info['website'], '@author' => $info['author'])),
       '#description' => $info['description'],
       '#default_value' => theme_get_setting('root_library_' . $library),
     );

@@ -59,10 +59,7 @@ function root_drush_command() {
   );
 
   $items['root-download-libraries'] = array(
-    'description' => dt('Downloads all available (and downloadable) libraries defined by the given theme and all its base themes.'),
-    'arguments' => array(
-      'theme' => dt('The machine-readable name of the theme to download the libraries for.'),
-    ),
+    'description' => dt('Downloads all available (and downloadable) libraries defined by the current default theme and all its base themes.'),
     'aliases' => array('rdll'),
   );
 
@@ -70,7 +67,7 @@ function root_drush_command() {
 }
 
 /**
- * Implements of hook_drush_help().
+ * Implements hook_drush_help().
  */
 function root_drush_help($section) {
   switch ($section) {
@@ -86,7 +83,7 @@ function root_drush_help($section) {
 }
 
 /**
- * Implements of drush_hook_COMMAND_validate().
+ * Implements drush_hook_COMMAND_validate().
  */
 function drush_root_subtheme_validate($name, $machine_name = NULL) {
   // Rebuild the theme data so that we can safely check for the existance of
@@ -106,27 +103,27 @@ function drush_root_subtheme_validate($name, $machine_name = NULL) {
 
   // Validate the machine-readable name of the theme.
   if (!$machine_name || !preg_match('/^[a-z][a-z0-9_]*$/', $machine_name)) {
-    return drush_set_error('ROOT_GENERATOR_ERROR', dt('The machine name is invalid. It may only contain lowercase numbers, letters and underscores and must start with a letter.'));
+    return drush_set_error('ROOT_THEME_NAME_INVALID', dt('The machine name is invalid. It may only contain lowercase numbers, letters and underscores and must start with a letter.'));
   }
 
   // Validate that the machine-readable name of the theme is unique.
   if (isset($themes[$machine_name])) {
-    return drush_set_error('ROOT_GENERATOR_ERROR', dt('A theme with that name already exists. The machine-readable name must be unique.'));
+    return drush_set_error('ROOT_THEME_ALREADY_EXISTS', dt('A theme with that name already exists. The machine-readable name must be unique.'));
   }
 
   // Check if the destination is valid.
   if (!in_array($destination, root_generator_sites())) {
-    return drush_set_error('ROOT_GENERATOR_ERROR', dt('The destination is invalid.'));
+    return drush_set_error('ROOT_DESITINATION_INVALID', dt('The destination is invalid.'));
   }
 
   // Check if the chosen base theme or starterkit exists.
   if (!array_key_exists($starterkit, root_generator_starterkits())) {
-    return drush_set_error('ROOT_GENERATOR_ERROR', dt('There is no valid Root theme starterkit with the name @starterkit.', array('@starterkit' => $starterkit)));
+    return drush_set_error('ROOT_STARTERKIT_NOT_EXISTS', dt('There is no valid Root theme starterkit with the name @starterkit.', array('@starterkit' => $starterkit)));
   }
 }
 
 /**
- * Implements of drush_hook_COMMAND().
+ * Implements drush_hook_COMMAND().
  */
 function drush_root_subtheme($name) {
   $subtheme = new stdClass();
@@ -141,68 +138,105 @@ function drush_root_subtheme($name) {
     drush_log(dt('You have successfully created the theme @theme.', array('@theme' => $subtheme->name)), 'success');
   }
   else {
-    drush_log(dt('There was an error when creating the theme @theme. Please refer to watchdog for further information.', array('@theme' => $subtheme->name)), 'error');
+    drush_set_error('ROOT_SUBTHEME_CREAT_ERROR', dt('There was an error when creating the theme @theme. Please refer to watchdog for further information.', array('@theme' => $subtheme->name)), 'error');
   }
 }
 
 /**
- * Implements of drush_hook_COMMAND_validate().
+ * Implements drush_hook_COMMAND_validate().
  */
 function drush_root_export_validate($theme) {
   $themes = list_themes();
   // Check if the given theme exists.
-  return isset($themes[$theme]);
+  if (!isset($themes[$theme])) {
+    return drush_set_error('ROOT_THEME_NOT_EXISTS', dt('There is no theme with that name.'));
+  }
 }
 
 /**
- * Implements of drush_hook_COMMAND().
+ * Implements drush_hook_COMMAND().
  */
 function drush_root_export($theme) {
   $themes = list_themes();
 
-  if (isset($themes[$theme])) {
-    if (root_generator_export_theme_settings($theme)) {
-      drush_log(dt('The theme settings for the @theme theme have been successfully exported.', array('@theme' => $themes[$theme]->info['name'])), 'success');
+  if (root_generator_export_theme_settings($theme)) {
+    drush_log(dt('The theme settings for the @theme theme have been successfully exported.', array('@theme' => $themes[$theme]->info['name'])), 'success');
 
-      if (drush_get_option('revert')) {
-        // Revert the theme settings if the 'revert' option is set and they have
-        // been exported successfully. In this case, we invoke the API function
-        // through the drush command to get the  print messages displazed.
-        drush_op('drush_root_revert', $theme);
-      }
-    }
-    else {
-      // There was an error while exporting the theme settings.
-      drush_log(dt('An error occurred while trying to export the theme settings for the @theme theme.', array('@theme' => $themes[$theme]->info['name'])), 'error');
+    if (drush_get_option('revert')) {
+      // Revert the theme settings if the 'revert' option is set and they have
+      // been exported successfully. In this case, we invoke the API function
+      // through the drush command to get the  print messages displazed.
+      drush_op('drush_root_revert', $theme);
     }
   }
   else {
-    // The theme doesn't exist.
-    drush_log(dt("The theme that that you tried to export the theme settings for doesn't exist."), 'error');
+    // There was an error while exporting the theme settings.
+    drush_set_error('ROOT_EXPORT_ERROR', dt('An error occurred while trying to export the theme settings for the @theme theme.', array('@theme' => $themes[$theme]->info['name'])));
   }
 }
 
 /**
- * Implements of drush_hook_COMMAND_validate().
+ * Implements drush_hook_COMMAND_validate().
  */
 function drush_root_revert_validate($theme) {
   $themes = list_themes();
   // Check if the given theme exists.
-  return isset($themes[$theme]);
+  if (!isset($themes[$theme])) {
+    return drush_set_error('ROOT_THEME_NOT_EXISTS', dt('There is no theme with that name.'));
+  }
 }
 
 /**
- * Implements of drush_hook_COMMAND().
+ * Implements drush_hook_COMMAND().
  */
 function drush_root_revert($theme) {
   $themes = list_themes();
+  root_generator_revert_theme_settings($theme);
+  drush_log(dt('You have successfully reverted the theme settings for the @theme theme.', array('@theme' => $themes[$theme]->info['name'])), 'success');
+}
 
-  if (isset($themes[$theme])) {
-    root_generator_revert_theme_settings($theme);
-    drush_log(dt('You have successfully reverted the theme settings for the @theme theme.', array('@theme' => $themes[$theme]->info['name'])), 'success');
+/**
+ * Implements drush_hook_COMMAND_validate().
+ */
+function drush_root_download_libraries_validate() {
+  // @todo change the array index to '0' once we are no longer a bartik subtheme.
+  if (!isset($GLOBALS['base_theme_info'][1]) || $GLOBALS['base_theme_info'][1]->name != 'root') {
+    // If this is not 'root' the current default theme is not a Root subtheme.
+    return drush_set_error('ROOT_ERROR', dt('The current default theme has to be a Root subtheme for this operation to work.'));
   }
-  else {
-    // The theme doesn't exist.
-    drush_log(dt("The theme that that you tried to revert the theme settings for doesn't exist."), 'error');
+}
+
+/**
+ * Implements drush_hook_COMMAND().
+ */
+function drush_root_download_libraries() {
+  foreach (root_invoke_all('root_libraries_info') as $library => $info) {
+    if (!empty($info['download'])) {
+      foreach ($info['download'] as $source => $filename) {
+        $path = module_exists('libraries') ? libraries_get_path($library) : drupal_get_path('theme', $GLOBALS['theme_key']) . '/libraries/' . $library;
+
+        if (file_exists($path . '/' . $filename) && !drush_confirm(dt('There is already a @file file in @path. Do you want to override it?', array('@file' => $filename, '@path' => $path)))) {
+          // Don't download the file if it already exists and the user doesn't
+          // want to override it.
+          continue;
+        }
+
+        if (!is_dir($path) && !drush_mkdir($path)) {
+          // Jump to the next file if the directory doesn't exists and there was
+          // a problem when creating it.
+          continue;
+        }
+
+        // Download the file to the libraries folder.
+        if (_drush_download_file($source, $path . '/' . $filename)) {
+          // The download succeeded.
+          drush_log(dt('The @file file for the @label library has been downloaded to @path.', array('@file' => $filename, '@label' => $info['label'], '@path' => $path)), 'success');
+        }
+        else {
+          // There was a problem.
+          drush_set_error('ROOT_LIBRARY_DOWNLOAD_ERROR', dt('There was a problem when trying to download the @file file for the @label library.', array('@file' => $filename, '@label' => $info['label'])));
+        }
+      }
+    }
   }
 }
