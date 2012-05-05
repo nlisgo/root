@@ -211,30 +211,56 @@ function drush_root_download_libraries_validate() {
  */
 function drush_root_download_libraries() {
   foreach (root_invoke_all('root_libraries_info') as $library => $info) {
-    if (!empty($info['download'])) {
-      foreach ($info['download'] as $source => $filename) {
-        $path = module_exists('libraries') ? libraries_get_path($library) : drupal_get_path('theme', $GLOBALS['theme_key']) . '/libraries/' . $library;
+    if (!empty($info['tarball download']) || !empty($info['direct download'])) {
+      $path = module_exists('libraries') ? libraries_get_path($library) : drupal_get_path('theme', $GLOBALS['theme_key']) . '/libraries';
 
-        if (file_exists($path . '/' . $filename) && !drush_confirm(dt('There is already a @file file in @path. Do you want to override it?', array('@file' => $filename, '@path' => $path)))) {
-          // Don't download the file if it already exists and the user doesn't
-          // want to override it.
-          continue;
-        }
+      if (!is_dir($path) && !drush_mkdir($path)) {
+        // Jump to the next file if the directory doesn't exists and there was
+        // a problem when creating it.
+        continue;
+      }
 
-        if (!is_dir($path) && !drush_mkdir($path)) {
-          // Jump to the next file if the directory doesn't exists and there was
-          // a problem when creating it.
-          continue;
-        }
+      if (!is_writable($path)) {
+        // Continue with the next file if the directory is not writable.
+        continue;
+      }
 
-        // Download the file to the libraries folder.
-        if (_drush_download_file($source, $path . '/' . $filename)) {
+      // Process all tarball downloads and extractions if any.
+      if (!empty($info['tarball download'])) {
+        // We use an arbitary filename, since some sources (e.g. github) do not
+        // include a filename in the URL.
+        $tarball = $path . '/drush-library-' . $library . '.tar.gz';
+
+        // Download and extract the tarball to the library folder.
+        if (drush_download_file($info['tarball download'], $tarball) && drush_tarball_extract($tarball)) {
           // The download succeeded.
-          drush_log(dt('The @file file for the @label library has been downloaded to @path.', array('@file' => $filename, '@label' => $info['label'], '@path' => $path)), 'success');
+          drush_log(dt('The tarball for the @label library has been downloaded and extracted in @path.', array('@label' => $info['label'], '@path' => $path)), 'success');
         }
         else {
           // There was a problem.
-          drush_set_error('ROOT_LIBRARY_DOWNLOAD_ERROR', dt('There was a problem when trying to download the @file file for the @label library.', array('@file' => $filename, '@label' => $info['label'])));
+          drush_set_error('ROOT_LIBRARY_DOWNLOAD_ERROR', dt('There was a problem when trying to download the tarball for the @label library.', array('@label' => $info['label'])));
+        }
+      }
+
+      // Process all direct file downloads if any.
+      if (!empty($info['direct download'])) {
+        foreach ($info['direct download'] as $source => $filename) {
+
+          if (file_exists($path . '/' . $filename) && !drush_confirm(dt('There is already a @file file in @path. Do you want to override it?', array('@file' => $filename, '@path' => $path)))) {
+            // Don't download the file if it already exists and the user doesn't
+            // want to override it.
+            continue;
+          }
+
+          // Download the file to the libraries folder.
+          if (_drush_download_file($source, $path . '/' . $filename)) {
+            // The download succeeded.
+            drush_log(dt('The @file file for the @label library has been downloaded to @path.', array('@file' => $filename, '@label' => $info['label'], '@path' => $path)), 'success');
+          }
+          else {
+            // There was a problem.
+            drush_set_error('ROOT_LIBRARY_DOWNLOAD_ERROR', dt('There was a problem when trying to download the @file file for the @label library.', array('@file' => $filename, '@label' => $info['label'])));
+          }
         }
       }
     }

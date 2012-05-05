@@ -9,52 +9,60 @@
  * Implements hook_extension_EXTENSION_theme_settings_form_alter().
  */
 function root_extension_libraries_theme_settings_form_alter($element, &$form, $form_state) {
-  $element['#description'] = t("Remember to download all the libraries that you want to use to your theme directory as we won't include any of them in the base theme to prevent them from becoming out-dated.");
+  $libraries = theme_get_setting('root_libraries');
+  $trail = root_theme_trail();
 
-  $libraries = array();
-  foreach (root_invoke_all('root_libraries_info') as $library => $info) {
-    $libraries['root_library_' . $library] = array(
-      '#type' => 'checkbox',
-      '#title' => t('@library by <a href="!url">@author</a>', array('@library' => $info['label'], '!url' => $info['website'], '@author' => $info['author'])),
-      '#description' => $info['description'],
-      '#default_value' => theme_get_setting('root_library_' . $library),
-    );
+  foreach (root_theme_libraries_info() as $library => $info) {
+    if (isset($info['theme']) && array_key_exists($info['theme'], $trail)) {
+      $element[$library]['status'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('@library by <a href="!url">@vendor</a>', array('@library' => $info['name'], '!url' => $info['vendor url'], '@vendor' => $info['vendor'])),
+        '#description' => $info['description'],
+        '#default_value' => !empty($libraries[$library]['status']),
+        '#parents' => array('root_libraries', $library, 'status'),
+      );
 
-    // Some libraries might want to provide special options.
-    $function = $info['theme'] . '_library_options_form';
-    if (function_exists($function)) {
       $options = array();
-      // If a library options form callback exists and actually returns some
-      // options for this library append conditionally show them underneath the
-      // library checkbox with #states.
-      if ($options = $function($options, $form, $form_state, $library, $info)) {
-        $libraries['root_library_' . $library . '_options'] = array(
+
+      // Some libraries might want to provide special options.
+      if (isset($info['options form callback']) && function_exists($info['options form callback'])) {
+        // If a library options form callback exists and actually returns some
+        // options for this library append conditionally show them underneath
+        // the library checkbox with #states.
+        $options += $info['options form callback']($options, $form, $form_state, $library, $info);
+      }
+
+      if (!empty($info['variants'])) {
+        $variants = array();
+        foreach ($info['variants'] as $variant => $variant_info) {
+          $variants[$variant] = $variant_info['name'] . (isset($variant_info['description']) ? '<div class="description">' . $variant_info['description'] . '</div>': '');
+        }
+
+        if (!empty($variants)) {
+          $variants = array_merge(array('_default' => t('Default') . '<div class="description">' . t('The default variant generally is a minified version of the library and provides the optimal production solution in most cases.') . '</div>'), $variants);
+
+          $options['variant'] = array(
+            '#type' => 'radios',
+            '#title' => t('Variant'),
+            '#options' => $variants,
+            '#default_value' => !empty($libraries[$library]['variant']) ? $libraries[$library]['variant'] : '_default',
+            '#parents' => array('root_libraries', $library, 'variant'),
+          );
+        }
+      }
+
+      if (!empty($options)) {
+        $element[$library]['options'] = array(
           '#type' => 'container',
           '#states' => array(
             'visible' => array(
-              ':input[name="root_library_' . $library . '"]' => array('checked' => TRUE),
+              ':input[name="root_libraries[' . $library . '][status]"]' => array('checked' => TRUE),
             ),
           ),
           '#attributes' => array('class' => array('root-settings-container')),
         ) + $options;
       }
     }
-  }
-
-  if (!empty($libraries)) {
-    $element['root_minified_libraries'] = array(
-      '#type' => 'checkbox',
-      '#title' => t('Preferably include minified versions of selected libraries'),
-      '#description' => t('Loads the minified (production) version instead of the un-minified (development) version of a library. Highly suggested when going into production.'),
-      '#default_value' => theme_get_setting('root_minified_libraries'),
-      '#weight' => -10,
-    );
-
-    // Place the available library options in a dedicated fieldset.
-    $element['root_libraries'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('Available libraries'),
-    ) + $libraries;
   }
 
   return $element;
@@ -103,4 +111,53 @@ function root_library_pie_selectors_submit($form, &$form_state) {
 
   // Purge the selectors from the theme settings array.
   unset($form_state['values']['root_library_pie_selectors']);
+}
+
+
+/**
+ * CSS3PIE Library options form callback.
+ */
+function root_library_pie_options_form($element, &$form, $form_state, $library, $info) {
+  // Some of our libraries provide additional options.
+  switch ($library) {
+    case 'pie':
+      $element['root_library_pie_inclusion'] = array(
+        '#title' => t('Inclusion method'),
+        '#type' => 'select',
+        '#options' => array('pie.htc' => t('HTML Component (default)'), 'pie.php' => t('PHP Script'), 'pie.js' => ('JavaScript File (not recommended)')),
+        '#description' => t('Please refer to the <a href="!link">official documentation</a> to learn about the advantages and disadvantages of the different inclusion methods.', array('!link' => 'http://css3pie.com/documentation/')),
+      );
+
+      // Pull the theme key from the form arguments.
+      $theme = $form_state['build_info']['args'][0];
+      // Load the contents of the current version of the PIE selector css file.
+      $source = 'public://root/' . $theme . '-pie-selectors.css';
+
+      // Load the current PIE selectors file if one exists.
+      if ($selectors = @file_get_contents($source)) {
+        // We need to sanitize the output for our textarea.
+        $selectors = preg_replace('/\{ behavior: url\((.*)\); \}/', '', $selectors);
+        $selectors = array_filter(array_map('trim', explode(',', $selectors)));
+        $selectors = implode("\n", $selectors);
+      }
+
+      $element['root_library_pie_selectors'] = array(
+        '#title' => t('Selectors'),
+        '#type' => 'textarea',
+        '#description' => t("You can use this textarea to define all the CSS rules that you want to apply the PIE behavior to. Define one CSS selector per line. Note: The value of this field is not stored as a theme settings as it is directly written to a .css file in the <a href=\"!url\">public file system</a> to not clutter the theme settings array. Therefore, it won't get exported if you choose to export your theme settings.", array('!url' => file_create_url($source))),
+        '#default_value' => $selectors ? $selectors : '',
+        '#states' => array(
+          'invisible' => array(
+            ':input[name="root_library_pie_inclusion"]' => array('value' => 'pie.js'),
+          ),
+        ),
+      );
+
+      // We need to provide a submit handler to create a CSS file for the
+      // defined selectors and remove them from the theme settings array.
+      $form['#submit'][] = 'root_library_pie_selectors_submit';
+      break;
+  }
+
+  return $element;
 }

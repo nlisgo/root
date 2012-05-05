@@ -169,34 +169,42 @@ function root_html_head_alter(&$head) {
 }
 
 /**
- * Implements hook_root_libraries_info().
+ * @return array
  */
-function root_root_libraries_info($theme = NULL) {
-  $theme = isset($theme) ? $theme : $GLOBALS['theme_key'];
+function root_theme_libraries_info() {
+  $libraries = array();
+  foreach (root_invoke_all('root_theme_libraries_info') as $library => $info) {
+    $libraries[$library] = libraries_info_defaults($info, $library);
+  }
 
-  $libraries['selectivizr'] = array(
-    'label' => t('Selectivizr'),
+  return $libraries;
+}
+
+/**
+ *
+ */
+function root_root_theme_libraries_info() {
+  $info['selectivizr'] = array(
+    'name' => t('Selectivizr'),
     'description' => t('Selectivizr is a JavaScript utility that emulates CSS3 pseudo-classes and attribute selectors in Internet Explorer 6-8. Simply include the script in your pages and selectivizr will do the rest.'),
-    'author' => 'Keith Clark',
-    'website' => 'http://selectivizr.com/',
+    'vendor' => 'Keith Clark',
+    'vendor url' => 'http://selectivizr.com/',
+    'version' => '1.0',
     // With our drush integration we can automatically download all our library
-    // files that have a download path registered.
-    'download' => array(
-      'https://raw.github.com/keithclark/selectivizr/master/selectivizr.js' => 'selectivizr.js',
-    ),
-    // This is actually the default. We just list it here for documentation
-    // purposes.
-    'include callback' => 'root_library_default_include_callback',
+    // files that have a download url registered.
+    'download url' => 'http://selectivizr.com/downloads/selectivizr-1.0.2.zip',
     // This is the path that the file resides in and is not actually part
     // of the options array that is later passed to drupal_add_js(). This
     // is also not really required as the Root base theme uses the
     // library module path via libraries_get_path() (with a fallback for
     // the theme directory) by default. However, for documentation
     // purposes, we will just leave this here.
-    'path' => module_exists('libraries') ? libraries_get_path('selectivizr') : drupal_get_path('theme', $theme) . '/libraries/selectivizr',
-    'library' => array(
+    'versions' => array(
+      '1.0' => '1.0',
+    ),
+    'files' => array(
       'js' => array(
-        'selectivizr.js' => array(
+        'selectivizr-min.js' => array(
           // Only load Selectivizr for Internet Explorer > 6 and < 8.
           'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
           // Selectivizr shouldn't be preprocessed (aggregated).
@@ -206,20 +214,37 @@ function root_root_libraries_info($theme = NULL) {
         ),
       )
     ),
+    // The Selectivizr library also ships with a source (unminified) version.
+    'variants' => array(
+      'source' => array(
+        'name' => t('Source'),
+        'description' => t('During development it might be useful to include the source files instead of the minified version.'),
+        'files' => array(
+          'js' => array(
+            'selectivizr.js' => array(
+              // Only load Selectivizr for Internet Explorer > 6 and < 8.
+              'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
+              // Selectivizr shouldn't be preprocessed (aggregated).
+              'preprocess' => FALSE,
+              'group' => JS_LIBRARY,
+              'weight' => -100,
+            ),
+          ),
+        ),
+      ),
+    ),
   );
 
-  $libraries['respond'] = array(
-    'label' => t('Respond'),
+  $info['respond'] = array(
+    'name' => t('Respond'),
     'description' => t('Respond is a fast & lightweight polyfill for min/max-width CSS3 Media Queries (for IE 6-8, and more).'),
-    'author' => 'Scott Jehl',
-    'website' => 'http://scottjehl.com/',
-    'download' => array(
-      'https://raw.github.com/scottjehl/Respond/master/respond.src.js' => 'respond.js',
-      'https://raw.github.com/scottjehl/Respond/master/respond.min.js' => 'respond.min.js',
-    ),
-    'library' => array(
+    'vendor' => 'Scott Jehl',
+    'vendor url' => 'http://scottjehl.com/',
+    'version' => '1.0',
+    'download url' => 'https://github.com/scottjehl/Respond/tarball/master',
+    'files' => array(
       'js' => array(
-        'respond.js' => array(
+        'respond.min.js' => array(
           'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
           'preprocess' => FALSE,
           'group' => JS_LIBRARY,
@@ -227,69 +252,72 @@ function root_root_libraries_info($theme = NULL) {
         ),
       ),
     ),
+    'variants' => array(
+      'source' => array(
+        'name' => t('Source'),
+        'description' => t('During development it might be useful to include the source files instead of the minified version.'),
+        'files' => array(
+          'js' => array(
+            'respond.js' => array(
+              'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
+              'preprocess' => FALSE,
+              'group' => JS_LIBRARY,
+              'weight' => -100,
+            ),
+          ),
+        ),
+      ),
+    ),
   );
 
 
-  $libraries['pie'] = array(
-    'label' => t('CSS3 PIE'),
+  $info['css3pie'] = array(
+    'name' => t('CSS3 PIE'),
     'description' => t('PIE makes Internet Explorer 6-9 capable of rendering several of the most useful CSS3 decoration features.'),
-    'author' => 'Keith Clark',
-    'website' => 'http://css3pie.com/',
+    'vendor' => 'Keith Clark',
+    'vendor url' => 'http://css3pie.com/',
+    'version' => '1.0',
+    'download url' => 'http://css3pie.com/download-latest',
+    'options form callback' => 'root_library_pie_options_form',
+    'files' => array(
+      'js' => array(
+        'pie.js' => array(
+          'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
+          'preprocess' => FALSE,
+          'group' => JS_LIBRARY,
+          'weight' => -100,
+        ),
+      ),
+    ),
     // The pie library is completely different to all other libraries in how it
     // is loaded (different inclusion types, etc.) so we just handle it with a
-    // custom 'include callback'. We can't really download it automatically
-    // either because (as of writing this) there is no hosted, uncompressed
-    // built lying around anywhere publicly.
-    'include callback' => 'root_pie_include_callback',
+    // custom pre-load callback.
+    'pre-load' => array('root_pie_pre_load_callback'),
+    'variants' => array(
+      'js' => array(
+        'name' => t('JavaScript'),
+        'description' => t('While the .htc behavior is still the recommended approach for most users, the JS version has some advantages that may be a better fit for some users.'),
+        'files' => array(
+          'js' => array(
+            'pie.js' => array(
+              'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
+              'preprocess' => FALSE,
+              'group' => JS_LIBRARY,
+              'weight' => -100,
+            ),
+          ),
+        ),
+      ),
+    ),
   );
 
-  return $libraries;
+  return $info;
 }
 
 /**
- * Library options form callback.
+ * Implements hook_libraries_info_alter().
  */
-function root_library_options_form($element, &$form, $form_state, $library, $info) {
-  // Some of our libraries provide additional options.
-  switch ($library) {
-    case 'pie':
-      $element['root_library_pie_inclusion'] = array(
-        '#title' => t('Inclusion method'),
-        '#type' => 'select',
-        '#options' => array('pie.htc' => t('HTML Component (default)'), 'pie.php' => t('PHP Script'), 'pie.js' => ('JavaScript File (not recommended)')),
-        '#description' => t('Please refer to the <a href="!link">official documentation</a> to learn about the advantages and disadvantages of the different inclusion methods.', array('!link' => 'http://css3pie.com/documentation/')),
-      );
-
-      // Pull the theme key from the form arguments.
-      $theme = $form_state['build_info']['args'][0];
-      // Load the contents of the current version of the PIE selector css file.
-      $source = 'public://root/' . $theme . '-pie-selectors.css';
-
-      // Load the current PIE selectors file if one exists.
-      if ($selectors = @file_get_contents($source)) {
-        // We need to sanitize the output for our textarea.
-        $selectors = preg_replace('/\{ behavior: url\((.*)\); \}/', '', $selectors);
-        $selectors = array_filter(array_map('trim', explode(',', $selectors)));
-        $selectors = implode("\n", $selectors);
-      }
-
-      $element['root_library_pie_selectors'] = array(
-        '#title' => t('Selectors'),
-        '#type' => 'textarea',
-        '#description' => t("You can use this textarea to define all the CSS rules that you want to apply the PIE behavior to. Define one CSS selector per line. Note: The value of this field is not stored as a theme settings as it is directly written to a .css file in the <a href=\"!url\">public file system</a> to not clutter the theme settings array. Therefore, it won't get exported if you choose to export your theme settings.", array('!url' => file_create_url($source))),
-        '#default_value' => $selectors ? $selectors : '',
-        '#states' => array(
-          'invisible' => array(
-            ':input[name="root_library_pie_inclusion"]' => array('value' => 'pie.js'),
-          ),
-        ),
-      );
-
-      // We need to provide a submit handler to create a CSS file for the
-      // defined selectors and remove them from the theme settings array.
-      $form['#submit'][] = 'root_library_pie_selectors_submit';
-      break;
-  }
-
-  return $element;
+function root_libraries_info_alter(&$libraries) {
+  $info = root_theme_libraries_info();
+  $libraries = array_merge($info, $libraries);
 }
