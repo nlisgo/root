@@ -38,6 +38,14 @@ function root_extension_compatibility_preprocess_html(&$variables) {
   // Send X-UA-Compatible HTTP header to force IE to use the most recent
   // rendering engine or use Chrome's frame rendering engine if available.
   if (theme_get_setting('root_chrome_edge') && drupal_get_http_header('X-UA-Compatible') === NULL) {
-    drupal_add_http_header('X-UA-Compatible', 'IE=edge,chrome=1');
+    $meta = array(
+      '#tag' => 'meta',
+      '#attributes' => array(
+        'http-equiv' => 'X-UA-Compatible',
+        'content' => 'IE=edge,chrome=1',
+      ),
+    );
+
+    drupal_add_html_head($meta, 'root-chrome-edge');
   }
 }

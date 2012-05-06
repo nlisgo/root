@@ -54,19 +54,12 @@
   <title><?php print $head_title; ?></title>
   <?php print $head; ?>
   <?php print $styles; ?>
-  <?php if (!theme_get_setting('root_js_footer')): ?>
-    <?php print $scripts; ?>
-    <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
-  <?php endif; ?>
+  <?php print $scripts; ?>
 </head>
 <body<?php print $attributes;?>>
   <a href="#main-content" class="element-invisible element-focusable"><?php print t('Skip to main content'); ?></a>
   <?php print $page_top; ?>
   <?php print $page; ?>
   <?php print $page_bottom; ?>
-  <?php if (theme_get_setting('root_js_footer')): ?>
-    <?php print $scripts; ?>
-    <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
-  <?php endif; ?>
 </body>
 </html>

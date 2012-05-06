@@ -16,22 +16,13 @@ function root_extension_libraries_theme_settings_form_alter($element, &$form, $f
     if (isset($info['theme']) && array_key_exists($info['theme'], $trail)) {
       $element[$library]['status'] = array(
         '#type' => 'checkbox',
-        '#title' => t('@library by <a href="!url">@vendor</a>', array('@library' => $info['name'], '!url' => $info['vendor url'], '@vendor' => $info['vendor'])),
+        '#title' => isset($info['vendor url']) ? t('@library by <a href="!url">@vendor</a>', array('@library' => $info['name'], '!url' => $info['vendor url'], '@vendor' => $info['vendor'])) : t('@library by @vendor', array('@library' => $info['name'], '@vendor' => $info['vendor'])),
         '#description' => $info['description'],
         '#default_value' => !empty($libraries[$library]['status']),
         '#parents' => array('root_libraries', $library, 'status'),
       );
 
       $options = array();
-
-      // Some libraries might want to provide special options.
-      if (isset($info['options form callback']) && function_exists($info['options form callback'])) {
-        // If a library options form callback exists and actually returns some
-        // options for this library append conditionally show them underneath
-        // the library checkbox with #states.
-        $options += $info['options form callback']($options, $form, $form_state, $library, $info);
-      }
-
       if (!empty($info['variants'])) {
         $variants = array();
         foreach ($info['variants'] as $variant => $variant_info) {
@@ -51,6 +42,14 @@ function root_extension_libraries_theme_settings_form_alter($element, &$form, $f
         }
       }
 
+      // Some libraries might want to provide special options.
+      if (isset($info['options form callback']) && function_exists($info['options form callback'])) {
+        // If a library options form callback exists and actually returns some
+        // options for this library append conditionally show them underneath
+        // the library checkbox with #states.
+        $info['options form callback']($options, $form, $form_state, $library, $info);
+      }
+
       if (!empty($options)) {
         $element[$library]['options'] = array(
           '#type' => 'container',
@@ -59,105 +58,105 @@ function root_extension_libraries_theme_settings_form_alter($element, &$form, $f
               ':input[name="root_libraries[' . $library . '][status]"]' => array('checked' => TRUE),
             ),
           ),
+          '#parents' => array('root_libraries', $library),
+          '#tree' => TRUE,
           '#attributes' => array('class' => array('root-settings-container')),
         ) + $options;
       }
     }
   }
 
+  $form['#submit'][] = 'root_extension_libraries_theme_settings_form_submit';
+
   return $element;
+}
+
+/**
+ * Theme settings form submit handler for the libraries extension.
+ */
+function root_extension_libraries_theme_settings_form_submit($form, &$form_state) {
+  if (!empty($form_state['values']['root_libraries'])) {
+    $values = &$form_state['values']['root_libraries'];
+
+    foreach ($values as &$settings) {
+      if (isset($settings['variant']) && $settings['variant'] == '_default') {
+        // Unset the 'variant' option if it is the default option.
+        unset($settings['variant']);
+      }
+    }
+  }
 }
 
 /**
  * Theme settings form submit handler for handling the PIE selectors.
  */
 function root_library_pie_selectors_submit($form, &$form_state) {
-  $values = $form_state['values'];
+  $values = &$form_state['values']['root_libraries']['css3pie'];
 
-  // Pull the theme key from the form arguments.
+  // The generated CSS file is stored in the public file system.
   $theme = $form_state['build_info']['args'][0];
-
-  // The generated file is placed in the public file system and includes the
-  // name of the theme.
-  $destination = 'public://root/' . $theme . '-pie-selectors.css';
+  $destination = 'public://root/' . $theme;
 
   // Generate a CSS file for the provided selectors if the inclusion method is
   // set to 'pie.htc' or 'pie.php'.
-  if ($values['root_library_pie_selectors'] && in_array($values['root_library_pie_inclusion'], array('pie.htc', 'pie.php'))) {
+  if (!empty($values['selectors'])) {
     // Sanitize the selectors.
-    $selectors = array_map('trim', explode("\n", $values['root_library_pie_selectors']));
+    $selectors = array_map('trim', explode("\n", $values['selectors']));
     $selectors = array_unique($selectors);
 
-    // Retrieve the path to the library (use the library module if it is enabled
-    // or fall back to the path of the theme).
-    if (module_exists('libraries')) {
-      $path = libraries_get_path('pie') . '/' . $values['root_library_pie_inclusion'];
-    }
-    else {
-      $path = drupal_get_path('theme', $theme) . '/libraries/pie/' . $values['root_library_pie_inclusion'];
-    }
+    // Retrieve the path to the library.
+    $path = base_path() . libraries_get_path('css3pie') . '/pie.htc';
 
-    // Build the contents of the CSS file.
-    $data = implode(",\n", $selectors) . " { behavior: url($path); }";
+    // Build the contents of the CSS and JS file file.
+    $css = implode(",", $selectors) . "{behavior:url($path)}";
+    $js = '$(function(){Drupal.behaviors.css3pie={attach:function(context,settings){if(window.PIE){$("' . implode(",", $selectors) . '").each(function(){PIE.attach(this)})}}}})(jQuery);';
+
     // Save the generated CSS in the public file system replacing any previous
     // version.
-    file_prepare_directory(dirname($destination), FILE_CREATE_DIRECTORY);
-    file_unmanaged_save_data($data, $destination, FILE_EXISTS_REPLACE);
+    file_prepare_directory($destination, FILE_CREATE_DIRECTORY);
+    file_unmanaged_save_data($css, $destination . '/pie-selectors.css', FILE_EXISTS_REPLACE);
+    file_unmanaged_save_data($js, $destination . '/pie-selectors.js', FILE_EXISTS_REPLACE);
   }
   else {
     // Otherwise, we can delete the (now stale) CSS file.
-    file_unmanaged_delete($destination);
+    file_unmanaged_delete($destination . '/pie-selectors.css');
   }
 
-  // Purge the selectors from the theme settings array.
-  unset($form_state['values']['root_library_pie_selectors']);
+  // Set the selectors options to TRUE or FALSE depending on whether there are
+  // selectors to be loaded or not.
+  $parents = array('#parents' => array('root_libraries', 'css3pie', 'selectors'));
+  form_set_value($parents, !empty($values['selectors']), $form_state);
 }
 
 
 /**
  * CSS3PIE Library options form callback.
  */
-function root_library_pie_options_form($element, &$form, $form_state, $library, $info) {
-  // Some of our libraries provide additional options.
-  switch ($library) {
-    case 'pie':
-      $element['root_library_pie_inclusion'] = array(
-        '#title' => t('Inclusion method'),
-        '#type' => 'select',
-        '#options' => array('pie.htc' => t('HTML Component (default)'), 'pie.php' => t('PHP Script'), 'pie.js' => ('JavaScript File (not recommended)')),
-        '#description' => t('Please refer to the <a href="!link">official documentation</a> to learn about the advantages and disadvantages of the different inclusion methods.', array('!link' => 'http://css3pie.com/documentation/')),
-      );
+function root_library_pie_options_form(&$element, &$form, $form_state, $library, $info) {
+  // Give the default variant a proper label.
+  $element['variant']['#options']['_default'] = t('HTML Component (default)');
 
-      // Pull the theme key from the form arguments.
-      $theme = $form_state['build_info']['args'][0];
-      // Load the contents of the current version of the PIE selector css file.
-      $source = 'public://root/' . $theme . '-pie-selectors.css';
+  // Pull the theme key from the form arguments.
+  $theme = $form_state['build_info']['args'][0];
+  // Load the contents of the current version of the PIE selector css file.
+  $source = 'public://root/' . $theme . '/pie-selectors.css';
 
-      // Load the current PIE selectors file if one exists.
-      if ($selectors = @file_get_contents($source)) {
-        // We need to sanitize the output for our textarea.
-        $selectors = preg_replace('/\{ behavior: url\((.*)\); \}/', '', $selectors);
-        $selectors = array_filter(array_map('trim', explode(',', $selectors)));
-        $selectors = implode("\n", $selectors);
-      }
-
-      $element['root_library_pie_selectors'] = array(
-        '#title' => t('Selectors'),
-        '#type' => 'textarea',
-        '#description' => t("You can use this textarea to define all the CSS rules that you want to apply the PIE behavior to. Define one CSS selector per line. Note: The value of this field is not stored as a theme settings as it is directly written to a .css file in the <a href=\"!url\">public file system</a> to not clutter the theme settings array. Therefore, it won't get exported if you choose to export your theme settings.", array('!url' => file_create_url($source))),
-        '#default_value' => $selectors ? $selectors : '',
-        '#states' => array(
-          'invisible' => array(
-            ':input[name="root_library_pie_inclusion"]' => array('value' => 'pie.js'),
-          ),
-        ),
-      );
-
-      // We need to provide a submit handler to create a CSS file for the
-      // defined selectors and remove them from the theme settings array.
-      $form['#submit'][] = 'root_library_pie_selectors_submit';
-      break;
+  // Load the current PIE selectors file if one exists.
+  if ($selectors = @file_get_contents($source)) {
+    // We need to sanitize the output for our textarea.
+    $selectors = preg_replace('/\{behavior:url\((.*)\)\}/', '', $selectors);
+    $selectors = array_filter(array_map('trim', explode(',', $selectors)));
+    $selectors = implode("\n", $selectors);
   }
 
-  return $element;
+  $element['selectors'] = array(
+    '#title' => t('Selectors'),
+    '#type' => 'textarea',
+    '#description' => t("You can use this textarea to define all the CSS rules that you want to apply the PIE behavior to. Define one CSS selector per line. Note: The value of this field is not stored as a theme settings as it is directly written to a .css file in the <a href=\"!url\">public file system</a> to not clutter the theme settings array. Therefore, it won't get exported if you choose to export your theme settings.", array('!url' => file_create_url($source))),
+    '#default_value' => $selectors ? $selectors : '',
+  );
+
+  // We need to provide a submit handler to create a CSS file for the
+  // defined selectors and remove them from the theme settings array.
+  $form['#submit'][] = 'root_library_pie_selectors_submit';
 }

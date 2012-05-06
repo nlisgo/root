@@ -48,7 +48,7 @@ if ($GLOBALS['theme'] == $GLOBALS['theme_key'] && !$static = &drupal_static('the
  * declaration to make sure that the registry is rebuilt before invoking any
  * theme hooks.
  */
-if (root_extension_is_enabled('development') && theme_get_setting('root_rebuild_theme_registry')) {
+if (root_extension_is_enabled('development') && theme_get_setting('root_rebuild_theme_registry') && user_access('administer')) {
   drupal_theme_rebuild();
 
   if (flood_is_allowed('root_rebuild_registry_warning', 1)) {
@@ -79,10 +79,10 @@ function root_css_alter(&$css) {
   // pre-pending it to the CSS_DEFAULT group. This has the same effect as giving
   // it a separate (low-weighted) group but also allows it to be aggregated
   // together with the rest of the CSS.
-  foreach ($css as $key => $item) {
+  foreach ($css as &$item) {
     if ($item['group'] == CSS_SYSTEM) {
-      $css[$key]['group'] = CSS_DEFAULT;
-      $css[$key]['weight'] = $item['weight'] - 100;
+      $item['group'] = CSS_DEFAULT;
+      $item['weight'] = $item['weight'] - 100;
     }
   }
 }
@@ -93,6 +93,13 @@ function root_css_alter(&$css) {
 function root_js_alter(&$js) {
   if (root_extension_is_enabled('manipulation') && $exclude = theme_get_setting('root_js_exclude')) {
     root_exclude_assets($js, $exclude);
+  }
+
+  // Move all the JavaScript to the footer if the theme is configured that way.
+  if (theme_get_setting('root_js_footer')) {
+    foreach ($js as &$item) {
+      $item['scope'] = 'footer';
+    }
   }
 }
 
@@ -169,7 +176,10 @@ function root_html_head_alter(&$head) {
 }
 
 /**
- * @return array
+ * Wrapper for hook_libraries_info() to allow themes to easily define libraries
+ * and distinguish between module and theme provided libraries.
+ *
+ * @see hook_libraries_info()
  */
 function root_theme_libraries_info() {
   $libraries = array();
@@ -181,7 +191,7 @@ function root_theme_libraries_info() {
 }
 
 /**
- *
+ * Implements hook_root_theme_libraries_info().
  */
 function root_root_theme_libraries_info() {
   $info['selectivizr'] = array(
@@ -189,18 +199,12 @@ function root_root_theme_libraries_info() {
     'description' => t('Selectivizr is a JavaScript utility that emulates CSS3 pseudo-classes and attribute selectors in Internet Explorer 6-8. Simply include the script in your pages and selectivizr will do the rest.'),
     'vendor' => 'Keith Clark',
     'vendor url' => 'http://selectivizr.com/',
-    'version' => '1.0',
     // With our drush integration we can automatically download all our library
     // files that have a download url registered.
     'download url' => 'http://selectivizr.com/downloads/selectivizr-1.0.2.zip',
-    // This is the path that the file resides in and is not actually part
-    // of the options array that is later passed to drupal_add_js(). This
-    // is also not really required as the Root base theme uses the
-    // library module path via libraries_get_path() (with a fallback for
-    // the theme directory) by default. However, for documentation
-    // purposes, we will just leave this here.
-    'versions' => array(
-      '1.0' => '1.0',
+    'version arguments' => array(
+      'file' => 'changelog.txt',
+      'pattern' => '@v([0-9\.]+)@',
     ),
     'files' => array(
       'js' => array(
@@ -209,10 +213,11 @@ function root_root_theme_libraries_info() {
           'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
           // Selectivizr shouldn't be preprocessed (aggregated).
           'preprocess' => FALSE,
+          'scope' => 'footer',
           'group' => JS_LIBRARY,
           'weight' => -100,
         ),
-      )
+      ),
     ),
     // The Selectivizr library also ships with a source (unminified) version.
     'variants' => array(
@@ -226,6 +231,7 @@ function root_root_theme_libraries_info() {
               'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
               // Selectivizr shouldn't be preprocessed (aggregated).
               'preprocess' => FALSE,
+              'scope' => 'footer',
               'group' => JS_LIBRARY,
               'weight' => -100,
             ),
@@ -240,13 +246,13 @@ function root_root_theme_libraries_info() {
     'description' => t('Respond is a fast & lightweight polyfill for min/max-width CSS3 Media Queries (for IE 6-8, and more).'),
     'vendor' => 'Scott Jehl',
     'vendor url' => 'http://scottjehl.com/',
-    'version' => '1.0',
     'download url' => 'https://github.com/scottjehl/Respond/tarball/master',
     'files' => array(
       'js' => array(
         'respond.min.js' => array(
           'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
           'preprocess' => FALSE,
+          'scope' => 'footer',
           'group' => JS_LIBRARY,
           'weight' => -90,
         ),
@@ -261,6 +267,7 @@ function root_root_theme_libraries_info() {
             'respond.js' => array(
               'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
               'preprocess' => FALSE,
+              'scope' => 'footer',
               'group' => JS_LIBRARY,
               'weight' => -100,
             ),
@@ -270,29 +277,24 @@ function root_root_theme_libraries_info() {
     ),
   );
 
-
   $info['css3pie'] = array(
     'name' => t('CSS3 PIE'),
     'description' => t('PIE makes Internet Explorer 6-9 capable of rendering several of the most useful CSS3 decoration features.'),
     'vendor' => 'Keith Clark',
     'vendor url' => 'http://css3pie.com/',
-    'version' => '1.0',
     'download url' => 'http://css3pie.com/download-latest',
-    'options form callback' => 'root_library_pie_options_form',
-    'files' => array(
-      'js' => array(
-        'pie.js' => array(
-          'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
-          'preprocess' => FALSE,
-          'group' => JS_LIBRARY,
-          'weight' => -100,
-        ),
-      ),
+    'version arguments' => array(
+      'file' => 'pie.htc',
+      'pattern' => '@Version\s([a-z0-9\.]+)@',
     ),
+    'options form callback' => 'root_library_pie_options_form',
+    'files' => array(),
     // The pie library is completely different to all other libraries in how it
     // is loaded (different inclusion types, etc.) so we just handle it with a
     // custom pre-load callback.
-    'pre-load' => array('root_pie_pre_load_callback'),
+    'callbacks' => array(
+      'post-load' => array('root_library_pie_post_load_callback'),
+    ),
     'variants' => array(
       'js' => array(
         'name' => t('JavaScript'),
@@ -302,10 +304,34 @@ function root_root_theme_libraries_info() {
             'pie.js' => array(
               'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
               'preprocess' => FALSE,
+              'scope' => 'footer',
               'group' => JS_LIBRARY,
               'weight' => -100,
             ),
           ),
+        ),
+      ),
+    ),
+  );
+
+  $info['html5shiv'] = array(
+    'name' => t('HTML5 Shiv'),
+    'description' => t('This script is the defacto way to enable use of HTML5 sectioning elements in legacy Internet Explorer, as well as default HTML5 styling in Internet Explorer 6 - 9, Safari 4.x (and iPhone 3.x), and Firefox 3.x.'),
+    'vendor' => 'Alexander Farkas',
+    'library path' => 'http://html5shiv.googlecode.com/svn/trunk',
+    'version' => '1.0',
+    'version arguments' => array(
+      'file' => 'html5.js',
+      'pattern' => '@Version\s([a-z0-9\.]+)@',
+    ),
+    'files' => array(
+      'js' => array(
+        'html5.js' => array(
+          'type' => 'external',
+          'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
+          'group' => JS_LIBRARY,
+          'weight' => -100,
+          'scope' => 'footer',
         ),
       ),
     ),

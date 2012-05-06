@@ -19,4 +19,5 @@ function root_extension_development_theme_registry_alter(&$registry) {
  * Implements hook_extension_EXTENSION_preproces_html().
  */
 function root_extension_development_preprocess_html(&$variables) {
+  // @todo: Viewport properties widget.
 }

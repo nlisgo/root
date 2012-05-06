@@ -11,8 +11,8 @@
 function root_extension_performance_theme_settings_form_alter($element, &$form, $form_state) {
   $element['root_js_footer'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Output JavaScript files in the footer'),
-    '#description' => t('Outputs all JavaScript files in the footer instead of placing them in the header (default).'),
+    '#title' => t('Output JavaScript in the footer'),
+    '#description' => t('Outputs all JavaScript files and settings in the footer instead of placing them in the header (default).'),
     '#default_value' => theme_get_setting('root_js_footer'),
   );
 
