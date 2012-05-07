@@ -35,7 +35,7 @@ function root_extension_libraries_preprocess_html(&$variables) {
       if (isset($response['error message']) && user_access('administrate')) {
         drupal_set_message($response['error message'], 'error');
         if ($response['error'] == 'not found') {
-          drupal_set_message(t('At least one of the enabled libraries has not been downloaded yet. Please make sure that all enabled libraries have been downloaded and placed in the correct folder. You can use the drush command "drush root-download-libraries" to do this automatically.'), 'warning');
+          drupal_set_message(t('At least one of the enabled libraries has not been downloaded yet. Please make sure that all enabled libraries have been downloaded and placed in the correct folder. You can use the drush command "drush root-download-libraries" to do this automatically.'), 'warning', FALSE);
         }
       }
     }
@@ -51,7 +51,7 @@ function root_library_pie_post_load_callback($library, $version, $variant) {
   if (!empty($settings['css3pie']['selectors'])) {
     if ($variant == 'js') {
       $path = file_create_url('public://root/' . $GLOBALS['theme_key'] . '/pie-selectors.js');
-      $path = substr($path, strlen($GLOBALS['base_url']));
+      $path = substr($path, strlen($GLOBALS['base_url']) + 1);
       drupal_add_js($path, array('group' => JS_THEME, 'weight' => -10));
     }
     else {

@@ -199,70 +199,90 @@ function drush_root_revert($theme) {
  * Implements drush_hook_COMMAND_validate().
  */
 function drush_root_download_libraries_validate() {
-  // @todo change the array index to '0' once we are no longer a bartik subtheme.
-  if (!isset($GLOBALS['base_theme_info'][1]) || $GLOBALS['base_theme_info'][1]->name != 'root') {
-    // If this is not 'root' the current default theme is not a Root subtheme.
-    return drush_set_error('ROOT_ERROR', dt('The current default theme has to be a Root subtheme for this operation to work.'));
+  if ($GLOBALS['theme_key'] == 'root') {
+    return TRUE;
   }
+
+  foreach ($GLOBALS['base_theme_info'] as $info) {
+    if ($info->name == 'root') {
+      return TRUE;
+    }
+  }
+
+  return drush_set_error('ROOT_ERROR', dt('The current default theme has to be a Root subtheme for this operation to work.'));
 }
 
 /**
  * Implements drush_hook_COMMAND().
  */
 function drush_root_download_libraries() {
-  foreach (root_invoke_all('root_libraries_info') as $library => $info) {
-    if (!empty($info['tarball download']) || !empty($info['direct download'])) {
-      $path = module_exists('libraries') ? libraries_get_path($library) : drupal_get_path('theme', $GLOBALS['theme_key']) . '/libraries';
+  foreach (root_theme_libraries_info() as $library => $info) {
+    if (!empty($info['download url']) && _root_download_library($library, $info)) {
+      drush_log(dt('Success'), 'success');
+    }
+  }
+}
 
-      if (!is_dir($path) && !drush_mkdir($path)) {
-        // Jump to the next file if the directory doesn't exists and there was
-        // a problem when creating it.
-        continue;
-      }
+/**
+ * Helper function for downloading a library with drush.
+ *
+ * @param $library
+ *   The machine-readable name of the library to download.
+ * @param $url
+ *   The url that the library archive can be downloaded from.
+ *
+ * @return bool
+ *   TRUE if the library could be downloaded and extracted successfully, FALSE
+ *   otherwise.
+ */
+function _root_download_library($library, $info) {
+  // Retrieve the path of the library.
+  if (!$path = libraries_get_path($library)) {
+    if (!$site = drush_site_path()) {
+      return drush_set_error('ROOT_LIBRARY_PATH', dt('The path of the @library library could not be identified.', array('@library' => $info['name'])));
+    }
 
-      if (!is_writable($path)) {
-        // Continue with the next file if the directory is not writable.
-        continue;
-      }
+    $path = $site . '/libraries/' . $library;
+  }
 
-      // Process all tarball downloads and extractions if any.
-      if (!empty($info['tarball download'])) {
-        // We use an arbitary filename, since some sources (e.g. github) do not
-        // include a filename in the URL.
-        $tarball = $path . '/drush-library-' . $library . '.tar.gz';
+  // Create the directory if it doesn't exist yet.
+  if (!is_dir($path) && !drush_mkdir($path)) {
+    return drush_set_error('ROOT_LIBRARY_PATH', dt('An error occurred while trying to prepare the @path directory for the @library library.', array('@library' => $info['name'], '@path' => $path)));
+  }
 
-        // Download and extract the tarball to the library folder.
-        if (drush_download_file($info['tarball download'], $tarball) && drush_tarball_extract($tarball)) {
-          // The download succeeded.
-          drush_log(dt('The tarball for the @label library has been downloaded and extracted in @path.', array('@label' => $info['label'], '@path' => $path)), 'success');
-        }
-        else {
-          // There was a problem.
-          drush_set_error('ROOT_LIBRARY_DOWNLOAD_ERROR', dt('There was a problem when trying to download the tarball for the @label library.', array('@label' => $info['label'])));
-        }
-      }
+  // Make sure that the directory is writable.
+  if (!is_writable($path) && !file_prepare_directory($path)) {
+    return drush_set_error('ROOT_LIBRARY_PATH', dt('An error occurred while trying to prepare the @path directory for the @library library.', array('@library' => $info['name'], '@path' => $path)));
+  }
 
-      // Process all direct file downloads if any.
-      if (!empty($info['direct download'])) {
-        foreach ($info['direct download'] as $source => $filename) {
+  // Try to download the archive to the library folder.
+  $archive = $path . '/drush-library-' . $library;
+  if (!drush_download_file($info['download url'], $archive)) {
+    return drush_set_error('ROOT_LIBRARY_DOWNLOAD', dt('There was a problem when trying to download the @library library.', array('@library' => $info['name'])));
+  }
 
-          if (file_exists($path . '/' . $filename) && !drush_confirm(dt('There is already a @file file in @path. Do you want to override it?', array('@file' => $filename, '@path' => $path)))) {
-            // Don't download the file if it already exists and the user doesn't
-            // want to override it.
-            continue;
+  // The download succeeded, now lets try to extract the archive.
+  if (!drush_shell_exec('unzip -o %s -d %s', $archive, $path) && !drush_tarball_extract($archive)) {
+    return drush_set_error('ROOT_LIBRARY_EXTRACT', dt('There was a problem when trying to extract the @library library.', array('@library' => $info['name'])));
+  }
+
+  // Collapse possible subdirectories if any.
+  if (!empty($info['download subdirectory'])) {
+    foreach (drush_scan_directory($path, $info['download subdirectory'], array('.', '..'), FALSE, FALSE) as $file) {
+      if (is_dir($file->filename)) {
+        $directory = dir($file->filename);
+        while (FALSE !== ($read = $directory->read())) {
+          if (!in_array($read, array('.', '..'))) {
+            drush_move_dir($file->filename . '/' . $read, $path . '/' . $read, TRUE);
           }
-
-          // Download the file to the libraries folder.
-          if (_drush_download_file($source, $path . '/' . $filename)) {
-            // The download succeeded.
-            drush_log(dt('The @file file for the @label library has been downloaded to @path.', array('@file' => $filename, '@label' => $info['label'], '@path' => $path)), 'success');
-          }
-          else {
-            // There was a problem.
-            drush_set_error('ROOT_LIBRARY_DOWNLOAD_ERROR', dt('There was a problem when trying to download the @file file for the @label library.', array('@file' => $filename, '@label' => $info['label'])));
-          }
         }
+        $directory->close();
+
+        // Delete the archive subdirectory.
+        drush_delete_dir($file->filename);
       }
     }
   }
+
+  return TRUE;
 }

@@ -176,18 +176,11 @@ function root_html_head_alter(&$head) {
 }
 
 /**
- * Wrapper for hook_libraries_info() to allow themes to easily define libraries
- * and distinguish between module and theme provided libraries.
- *
- * @see hook_libraries_info()
+ * Implements hook_libraries_info_alter().
  */
-function root_theme_libraries_info() {
-  $libraries = array();
-  foreach (root_invoke_all('root_theme_libraries_info') as $library => $info) {
-    $libraries[$library] = libraries_info_defaults($info, $library);
-  }
-
-  return $libraries;
+function root_libraries_info_alter(&$libraries) {
+  $info = root_theme_libraries_info();
+  $libraries = array_merge($info, $libraries);
 }
 
 /**
@@ -247,6 +240,7 @@ function root_root_theme_libraries_info() {
     'vendor' => 'Scott Jehl',
     'vendor url' => 'http://scottjehl.com/',
     'download url' => 'https://github.com/scottjehl/Respond/tarball/master',
+    'download subdirectory' => '/^scottjehl-Respond-[a-z0-9]+$/',
     'files' => array(
       'js' => array(
         'respond.min.js' => array(
@@ -303,7 +297,6 @@ function root_root_theme_libraries_info() {
           'js' => array(
             'pie.js' => array(
               'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
-              'preprocess' => FALSE,
               'scope' => 'footer',
               'group' => JS_LIBRARY,
               'weight' => -100,
@@ -319,10 +312,9 @@ function root_root_theme_libraries_info() {
     'description' => t('This script is the defacto way to enable use of HTML5 sectioning elements in legacy Internet Explorer, as well as default HTML5 styling in Internet Explorer 6 - 9, Safari 4.x (and iPhone 3.x), and Firefox 3.x.'),
     'vendor' => 'Alexander Farkas',
     'library path' => 'http://html5shiv.googlecode.com/svn/trunk',
-    'version' => '1.0',
     'version arguments' => array(
       'file' => 'html5.js',
-      'pattern' => '@Version\s([a-z0-9\.]+)@',
+      'pattern' => '@HTML5\sShiv\s([a-z0-9\.]+)@',
     ),
     'files' => array(
       'js' => array(
@@ -338,12 +330,4 @@ function root_root_theme_libraries_info() {
   );
 
   return $info;
-}
-
-/**
- * Implements hook_libraries_info_alter().
- */
-function root_libraries_info_alter(&$libraries) {
-  $info = root_theme_libraries_info();
-  $libraries = array_merge($info, $libraries);
 }
