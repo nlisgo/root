@@ -9,7 +9,6 @@ features[] = logo
 features[] = favicon
 features[] = name
 features[] = slogan
-features[] = development
 features[] = libraries
 features[] = performance
 features[] = compatibility

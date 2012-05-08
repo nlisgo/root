@@ -9,8 +9,6 @@
  * Implements hook_extension_EXTENSION_theme_settings_form_alter().
  */
 function root_extension_compatibility_theme_settings_form_alter($element, &$form, $form_state) {
-  $scales = root_extension_compatibility_scale_options(1, 10, 0.5);
-
   $element['root_conditional_classes_html'] = array(
     '#type' => 'checkbox',
     '#title' => t('Add conditional classes for Internet Explorer'),

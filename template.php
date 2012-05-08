@@ -278,6 +278,10 @@ function root_root_theme_libraries_info() {
     'vendor url' => 'http://scottjehl.com/',
     'download url' => 'https://github.com/scottjehl/Respond/tarball/master',
     'download subdirectory' => '/^scottjehl-Respond-[a-z0-9]+$/',
+    'version arguments' => array(
+      'file' => 'respond.min.js',
+      'pattern' => '@Respond\.js\sv([0-9\.]+)@',
+    ),
     'theme' => 'root',
     'files' => array(
       'js' => array(
