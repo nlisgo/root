@@ -32,66 +32,6 @@ function root_generator_starterkits($base = NULL) {
 }
 
 /**
- * Recursively copies a directory from a given source to a given destination.
- *
- * @param $source
- *   The source path.
- * @param $destination
- *   The destination path.
- *
- * @return bool
- *   TRUE if the operation succeeded, FALSE otherwise.
- */
-function root_generator_copy_recursive($source, $destination) {
-  if (is_dir($source)) {
-    if (!file_prepare_directory($destination, FILE_CREATE_DIRECTORY)) {
-      watchdog('root', t('There was an error while trying to prepare a directory in @destination for copying over @source.', array('@destination' => $destination, '@source' => $source)));
-      return FALSE;
-    }
-    $directory = dir($source);
-
-    while (FALSE !== ($read = $directory->read())) {
-      if ($read != '.' && $read != '..' ) {
-        if (!root_generator_copy_recursive($source . '/' . $read, $destination . '/' . $read)) {
-          return FALSE;
-        }
-      }
-    }
-    $directory->close();
-  }
-  else {
-    file_unmanaged_copy($source, $destination);
-  }
-
-  return TRUE;
-}
-
-/**
- * Moves a directory from a given source to a given destination.
- *
- * @param $source
- *   The source path.
- * @param $destination
- *   The destination path.
- *
- * @return bool
- *   TRUE if the operation succeeded, FALSE otherwise.
- *
- * @see root_generator_copy_recursive()
- */
-function root_generator_move($source, $destination) {
-  if (root_generator_copy_recursive($source, $destination)) {
-    // Delete the files in the source path after they have been successfullly
-    // copied to their destination.
-    file_unmanaged_delete_recursive($source);
-
-    return TRUE;
-  }
-
-  return FALSE;
-}
-
-/**
  * Recursively rewrites (and renames) all files in a given path.
  *
  * @param $path
@@ -111,7 +51,7 @@ function root_generator_move($source, $destination) {
 function root_generator_rewrite_recursive($path, $search, $replace) {
   if ($path !== ($new = str_replace($search, $replace, $path))) {
     // First, try to rename (move) the file if the name was changed.
-    if (!$path = file_unmanaged_move($path, $new, FILE_EXISTS_REPLACE)) {
+    if (!$path = drush_move_dir($path, $new, TRUE)) {
       return FALSE;
     };
   }
@@ -135,7 +75,7 @@ function root_generator_rewrite_recursive($path, $search, $replace) {
     $before = file_get_contents($path);
 
     if ($before !== ($after = str_replace($search, $replace, $before))) {
-      if (file_unmanaged_save_data($after, $path, FILE_EXISTS_REPLACE)) {
+      if (file_put_contents($path, $after)) {
         return FALSE;
       }
     }
@@ -237,16 +177,10 @@ function root_generator_subtheme_create($subtheme) {
     return FALSE;
   }
 
-  // Try to prepare the destination directory for the new subtheme.
-  if (!file_prepare_directory($subtheme->path, FILE_CREATE_DIRECTORY)) {
-    watchdog('root', t('The Root subtheme generator was not able to create the directory @dir.', array('@dir' => $subtheme->path)), array(), WATCHDOG_ERROR);
-    return FALSE;
-  }
-
   $themes = list_themes();
   // Try to copy the starterkit to the destination path of the new subtheme.
   $source = drupal_get_path('theme', $subtheme->starterkit);
-  if (!root_generator_copy_recursive($source, $subtheme->path)) {
+  if (!drush_copy_dir($source, $subtheme->path)) {
     watchdog('root', t('The Root subtheme generator was not able to copy the starterkit @starterkit.', array('@starterkit' => $themes[$subtheme->starterkit]->info['name'])), array(), WATCHDOG_ERROR);
     return FALSE;
   }

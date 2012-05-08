@@ -19,5 +19,7 @@ function root_extension_development_theme_registry_alter(&$registry) {
  * Implements hook_extension_EXTENSION_preproces_html().
  */
 function root_extension_development_preprocess_html(&$variables) {
-
+  $path = drupal_get_path('theme', 'root');
+  drupal_add_js($path . '/js/root.viewport.js', array('group' => JS_THEME, 'weight' => -10));
+  drupal_add_css($path . '/css/root.viewport.css', array('group' => CSS_THEME, 'weight' => -10));
 }

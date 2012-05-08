@@ -383,23 +383,16 @@ function root_get_nested_value(&$object, array $parents, &$key_exists = NULL) {
  * Wrapper for hook_libraries_info() to allow themes to easily define libraries
  * and distinguish between module and theme provided libraries.
  *
- * @param $theme
- *   (Optional) The key (machine-readable name) of a theme. Defaults to the key
- *   of the current theme.
- *
  * @return array
- *   An array of libraries defined by themes in the theme trail of the given
+ *   An array of libraries defined by themes in the theme trail of the active
  *   theme.
  *
  * @see hook_libraries_info()
  */
-function root_theme_libraries_info($theme = NULL) {
-  $theme = isset($theme) ? $theme : $GLOBALS['theme_key'];
-
+function root_theme_libraries_info() {
   $libraries = array();
-  foreach (root_invoke_all('root_theme_libraries_info', $theme) as $library => $info) {
+  foreach (root_invoke_all('root_theme_libraries_info') as $library => $info) {
     $libraries[$library] = libraries_info_defaults($info, $library);
   }
-
   return $libraries;
 }

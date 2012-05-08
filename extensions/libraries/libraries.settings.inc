@@ -9,67 +9,68 @@
  * Implements hook_extension_EXTENSION_theme_settings_form_alter().
  */
 function root_extension_libraries_theme_settings_form_alter($element, &$form, $form_state) {
-  $libraries = theme_get_setting('root_libraries');
-  $trail = root_theme_trail();
+  if (module_exists('libraries')) {
+    $libraries = theme_get_setting('root_libraries');
 
-  foreach (root_theme_libraries_info() as $library => $info) {
-    if (isset($info['theme']) && array_key_exists($info['theme'], $trail)) {
-      $element[$library]['status'] = array(
-        '#type' => 'checkbox',
-        '#title' => isset($info['vendor url']) ? t('@library by <a href="!url">@vendor</a>', array('@library' => $info['name'], '!url' => $info['vendor url'], '@vendor' => $info['vendor'])) : t('@library by @vendor', array('@library' => $info['name'], '@vendor' => $info['vendor'])),
-        '#description' => $info['description'],
-        '#default_value' => !empty($libraries[$library]['status']),
-        '#parents' => array('root_libraries', $library, 'status'),
-      );
+    foreach (root_theme_libraries_info() as $library => $info) {
+      if (isset($info['theme'])) {
+        $element[$library]['status'] = array(
+          '#type' => 'checkbox',
+          '#title' => isset($info['vendor url']) ? t('@library by <a href="!url">@vendor</a>', array('@library' => $info['name'], '!url' => $info['vendor url'], '@vendor' => $info['vendor'])) : t('@library by @vendor', array('@library' => $info['name'], '@vendor' => $info['vendor'])),
+          '#description' => $info['description'],
+          '#default_value' => !empty($libraries[$library]['status']),
+          '#parents' => array('root_libraries', $library, 'status'),
+        );
 
-      $options = array();
-      if (!empty($info['variants'])) {
-        $variants = array();
-        foreach ($info['variants'] as $variant => $variant_info) {
-          $variants[$variant] = $variant_info['name'] . (isset($variant_info['description']) ? '<div class="description">' . $variant_info['description'] . '</div>': '');
+        $options = array();
+        if (!empty($info['variants'])) {
+          $variants = array();
+          foreach ($info['variants'] as $variant => $variant_info) {
+            $variants[$variant] = $variant_info['name'] . (isset($variant_info['description']) ? '<div class="description">' . $variant_info['description'] . '</div>': '');
+          }
+
+          if (!empty($variants)) {
+            $variants = array_merge(array('_default' => t('Default') . '<div class="description">' . t('The default variant generally is a minified version of the library and provides the optimal production solution in most cases.') . '</div>'), $variants);
+
+            $options['variant'] = array(
+              '#type' => 'radios',
+              '#title' => t('Variant'),
+              '#options' => $variants,
+              '#default_value' => !empty($libraries[$library]['variant']) ? $libraries[$library]['variant'] : '_default',
+              '#parents' => array('root_libraries', $library, 'variant'),
+            );
+          }
         }
 
-        if (!empty($variants)) {
-          $variants = array_merge(array('_default' => t('Default') . '<div class="description">' . t('The default variant generally is a minified version of the library and provides the optimal production solution in most cases.') . '</div>'), $variants);
-
-          $options['variant'] = array(
-            '#type' => 'radios',
-            '#title' => t('Variant'),
-            '#options' => $variants,
-            '#default_value' => !empty($libraries[$library]['variant']) ? $libraries[$library]['variant'] : '_default',
-            '#parents' => array('root_libraries', $library, 'variant'),
-          );
+        // Some libraries might want to provide special options.
+        if (isset($info['options form callback']) && function_exists($info['options form callback'])) {
+          // If a library options form callback exists and actually returns some
+          // options for this library append conditionally show them underneath
+          // the library checkbox with #states.
+          $info['options form callback']($options, $form, $form_state, $library, $info);
         }
-      }
 
-      // Some libraries might want to provide special options.
-      if (isset($info['options form callback']) && function_exists($info['options form callback'])) {
-        // If a library options form callback exists and actually returns some
-        // options for this library append conditionally show them underneath
-        // the library checkbox with #states.
-        $info['options form callback']($options, $form, $form_state, $library, $info);
-      }
-
-      if (!empty($options)) {
-        $element[$library]['options'] = array(
-          '#type' => 'fieldset',
-          '#title' => t('Options'),
-          '#states' => array(
-            'visible' => array(
-              ':input[name="root_libraries[' . $library . '][status]"]' => array('checked' => TRUE),
+        if (!empty($options)) {
+          $element[$library]['options'] = array(
+            '#type' => 'fieldset',
+            '#title' => t('Options'),
+            '#states' => array(
+              'visible' => array(
+                ':input[name="root_libraries[' . $library . '][status]"]' => array('checked' => TRUE),
+              ),
             ),
-          ),
-          '#parents' => array('root_libraries', $library),
-          '#tree' => TRUE,
-          '#attributes' => array('class' => array('root-settings-container')),
-          '#collapsible' => TRUE,
-          '#collapsed' => TRUE,
-        ) + $options;
+            '#parents' => array('root_libraries', $library),
+            '#tree' => TRUE,
+            '#attributes' => array('class' => array('root-settings-container')),
+            '#collapsible' => TRUE,
+            '#collapsed' => TRUE,
+          ) + $options;
+        }
       }
     }
-  }
 
-  $form['#submit'][] = 'root_extension_libraries_theme_settings_form_submit';
+    $form['#submit'][] = 'root_extension_libraries_theme_settings_form_submit';
+  }
 
   return $element;
 }

@@ -10,7 +10,7 @@
  */
 function root_extension_libraries_theme_registry_alter(&$registry) {
   // If there are one or more libraries in the cache, add the preprocess hook.
-  if ($libraries = theme_get_setting('root_libraries')) {
+  if (module_exists('libraries') && $libraries = theme_get_setting('root_libraries')) {
     foreach ($libraries as $settings) {
       if (!empty($settings['status'])) {
         $registry['html']['includes'][] = drupal_get_path('theme', 'root') . '/extensions/libraries/libraries.inc';
@@ -26,16 +26,18 @@ function root_extension_libraries_theme_registry_alter(&$registry) {
  * Implements hook_extension_EXTENSION_preproces_html().
  */
 function root_extension_libraries_preprocess_html(&$variables) {
-  foreach (theme_get_setting('root_libraries') as $library => $settings) {
-    // Check if the library is enabled.
-    if (!empty($settings['status'])) {
-      $variant = !empty($settings['variant']) ? $settings['variant'] : NULL;
-      $response = libraries_load($library, $variant);
+  if (module_exists('libraries')) {
+    foreach (theme_get_setting('root_libraries') as $library => $settings) {
+      // Check if the library is enabled.
+      if (!empty($settings['status'])) {
+        $variant = !empty($settings['variant']) ? $settings['variant'] : NULL;
+        $response = libraries_load($library, $variant);
 
-      if (isset($response['error message']) && user_access('administrate')) {
-        drupal_set_message($response['error message'], 'error');
-        if ($response['error'] == 'not found') {
-          drupal_set_message(t('At least one of the enabled libraries has not been downloaded yet. Please make sure that all enabled libraries have been downloaded and placed in the correct folder. You can use the drush command "drush root-download-libraries" to do this automatically.'), 'warning', FALSE);
+        if (isset($response['error message']) && user_access('administrate')) {
+          drupal_set_message($response['error message'], 'error');
+          if ($response['error'] == 'not found') {
+            drupal_set_message(t('At least one of the enabled libraries has not been downloaded yet. Please make sure that all enabled libraries have been downloaded and placed in the correct folder. You can use the drush command "drush root-download-libraries" to do this automatically.'), 'warning', FALSE);
+          }
         }
       }
     }

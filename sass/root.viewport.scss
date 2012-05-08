@@ -1,0 +1,49 @@
+@import "compass/css3/border-radius";
+
+.root-viewport-widget-wrapper {
+  position: fixed;
+  max-width: 100%;
+  width: 300px;
+  bottom: 0;
+  right: 0;
+  z-index: 9999;
+}
+
+.root-viewport-widget {
+  @include border-radius(5px);
+  display: none;
+  margin: 5px;
+  height: 150px;
+  background-color: rgba(0, 0, 0, 0.5);
+
+  .root-viewport-widget-toggled & {
+    display: block;
+  }
+}
+
+.root-viewport-widget-close {
+  @include border-radius(5px);
+  cursor: pointer;
+  background-color: rgba(0, 0, 0, 0.5);
+  height: 20px;
+  width: 20px;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.root-viewport-widget-open {
+  @include border-top-left-radius(60px);
+  cursor: pointer;
+  height: 60px;
+  width: 60px;
+  background-color: rgba(0, 0, 0, 0.5);
+  position: fixed;
+  bottom: 0;
+  right: 0;
+
+  .root-viewport-widget-toggled & {
+    display: none;
+  }
+}
+

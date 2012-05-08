@@ -48,12 +48,12 @@ if ($GLOBALS['theme'] == $GLOBALS['theme_key'] && !$static = &drupal_static('the
  * declaration to make sure that the registry is rebuilt before invoking any
  * theme hooks.
  */
-if (root_extension_is_enabled('development') && theme_get_setting('root_rebuild_theme_registry') && user_access('administer')) {
+if (root_extension_is_enabled('development') && theme_get_setting('root_rebuild_theme_registry') &&  user_access('administer site configuration')) {
   drupal_theme_rebuild();
 
-  if (flood_is_allowed('root_rebuild_registry_warning', 1)) {
+  if (flood_is_allowed('root_' . $GLOBALS['theme'] . '_rebuild_registry_warning', 3)) {
     // Alert the user that the theme registry is being rebuilt on every request.
-    flood_register_event('root_rebuild_registry_warning');
+    flood_register_event('root_' . $GLOBALS['theme'] . '_rebuild_registry_warning');
     drupal_set_message(t('The theme registry is being rebuilt on every request. Remember to <a href="!url">turn off</a> this feature on production websites.', array("!url" => url('admin/appearance/settings/' . $GLOBALS['theme']))));
   }
 }
@@ -187,7 +187,7 @@ function root_libraries_info_alter(&$libraries) {
  * Implements hook_root_theme_libraries_info().
  */
 function root_root_theme_libraries_info() {
-  $info['selectivizr'] = array(
+  $libraries['selectivizr'] = array(
     'name' => t('Selectivizr'),
     'description' => t('Selectivizr is a JavaScript utility that emulates CSS3 pseudo-classes and attribute selectors in Internet Explorer 6-8. Simply include the script in your pages and selectivizr will do the rest.'),
     'vendor' => 'Keith Clark',
@@ -199,13 +199,12 @@ function root_root_theme_libraries_info() {
       'file' => 'changelog.txt',
       'pattern' => '@v([0-9\.]+)@',
     ),
+    'theme' => 'root',
     'files' => array(
       'js' => array(
         'selectivizr-min.js' => array(
           // Only load Selectivizr for Internet Explorer > 6 and < 8.
           'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
-          // Selectivizr shouldn't be preprocessed (aggregated).
-          'preprocess' => FALSE,
           'scope' => 'footer',
           'group' => JS_LIBRARY,
           'weight' => -100,
@@ -222,8 +221,6 @@ function root_root_theme_libraries_info() {
             'selectivizr.js' => array(
               // Only load Selectivizr for Internet Explorer > 6 and < 8.
               'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
-              // Selectivizr shouldn't be preprocessed (aggregated).
-              'preprocess' => FALSE,
               'scope' => 'footer',
               'group' => JS_LIBRARY,
               'weight' => -100,
@@ -234,21 +231,61 @@ function root_root_theme_libraries_info() {
     ),
   );
 
-  $info['respond'] = array(
+  $libraries['css3mediaqueries'] = array(
+    'name' => t('CSS3 Media Queries'),
+    'description' => t('CSS3 Media Queries is a JavaScript library to make IE 5+, Firefox 1+ and Safari 2 transparently parse, test and apply CSS3 Media Queries. Firefox 3.5+, Opera 7+, Safari 3+ and Chrome already offer native support.'),
+    'vendor' => 'Wouter van der Graaf',
+    'vendor url' => 'http://woutervandergraaf.nl/',
+    'download url' => 'https://github.com/livingston/css3-mediaqueries-js/tarball/master',
+    'download subdirectory' => '/^livingston-css3-mediaqueries-js-[a-z0-9]+$/',
+    'version arguments' => array(
+      'file' => 'css3-mediaqueries.js',
+      'pattern' => '@version:\s([0-9\.]+)@',
+    ),
+    'theme' => 'root',
+    'files' => array(
+      'js' => array(
+        'css3-mediaqueries.min.js' => array(
+          'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
+          'scope' => 'footer',
+          'group' => JS_LIBRARY,
+          'weight' => -100,
+        ),
+      ),
+    ),
+    'variants' => array(
+      'source' => array(
+        'name' => t('Source'),
+        'description' => t('During development it might be useful to include the source files instead of the minified version.'),
+        'files' => array(
+          'js' => array(
+            'css3-mediaqueries.js' => array(
+              'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
+              'scope' => 'footer',
+              'group' => JS_LIBRARY,
+              'weight' => -100,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  $libraries['respond'] = array(
     'name' => t('Respond'),
     'description' => t('Respond is a fast & lightweight polyfill for min/max-width CSS3 Media Queries (for IE 6-8, and more).'),
     'vendor' => 'Scott Jehl',
     'vendor url' => 'http://scottjehl.com/',
     'download url' => 'https://github.com/scottjehl/Respond/tarball/master',
     'download subdirectory' => '/^scottjehl-Respond-[a-z0-9]+$/',
+    'theme' => 'root',
     'files' => array(
       'js' => array(
         'respond.min.js' => array(
           'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
-          'preprocess' => FALSE,
           'scope' => 'footer',
           'group' => JS_LIBRARY,
-          'weight' => -90,
+          'weight' => -100,
         ),
       ),
     ),
@@ -260,7 +297,6 @@ function root_root_theme_libraries_info() {
           'js' => array(
             'respond.js' => array(
               'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
-              'preprocess' => FALSE,
               'scope' => 'footer',
               'group' => JS_LIBRARY,
               'weight' => -100,
@@ -271,7 +307,7 @@ function root_root_theme_libraries_info() {
     ),
   );
 
-  $info['css3pie'] = array(
+  $libraries['css3pie'] = array(
     'name' => t('CSS3 PIE'),
     'description' => t('PIE makes Internet Explorer 6-9 capable of rendering several of the most useful CSS3 decoration features.'),
     'vendor' => 'Keith Clark',
@@ -282,6 +318,7 @@ function root_root_theme_libraries_info() {
       'pattern' => '@Version\s([a-z0-9\.]+)@',
     ),
     'options form callback' => 'root_library_pie_options_form',
+    'theme' => 'root',
     'files' => array(),
     // The pie library is completely different to all other libraries in how it
     // is loaded (different inclusion types, etc.) so we just handle it with a
@@ -307,7 +344,7 @@ function root_root_theme_libraries_info() {
     ),
   );
 
-  $info['html5shiv'] = array(
+  $libraries['html5shiv'] = array(
     'name' => t('HTML5 Shiv'),
     'description' => t('This script is the defacto way to enable use of HTML5 sectioning elements in legacy Internet Explorer, as well as default HTML5 styling in Internet Explorer 6 - 9, Safari 4.x (and iPhone 3.x), and Firefox 3.x.'),
     'vendor' => 'Alexander Farkas',
@@ -316,6 +353,7 @@ function root_root_theme_libraries_info() {
       'file' => 'html5.js',
       'pattern' => '@HTML5\sShiv\s([a-z0-9\.]+)@',
     ),
+    'theme' => 'root',
     'files' => array(
       'js' => array(
         'html5.js' => array(
@@ -329,5 +367,5 @@ function root_root_theme_libraries_info() {
     ),
   );
 
-  return $info;
+  return $libraries;
 }
