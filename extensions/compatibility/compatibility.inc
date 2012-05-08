@@ -17,35 +17,49 @@ function root_extension_compatibility_theme_registry_alter(&$registry) {
  * Implements hook_extension_EXTENSION_preproces_html().
  */
 function root_extension_compatibility_preprocess_html(&$variables) {
-  // Add a meta tag for the viewport specifications.
+  // Add the 'viewport' meta tag.
   if (theme_get_setting('root_viewport')) {
-    $initial = theme_get_setting('root_viewport_initial_scale');
-    $min = theme_get_setting('root_viewport_min_scale');
-    $max = theme_get_setting('root_viewport_max_scale');
-    $scalable = theme_get_setting('root_viewport_user_scalable') ? 'yes' : 'no';
-
     $meta = array(
       '#tag' => 'meta',
-      '#attributes' => array(
-        'name' => 'viewport',
-        'content' => 'width=device-width, initial-scale=' . $initial . ', maximum-scale=' . $max . ', minimum-scale=' . $min . ', user-scalable=' . $scalable,
-      ),
+      '#attributes' => array('name' => 'viewport', 'content' => 'width=device-width'),
     );
 
     drupal_add_html_head($meta, 'root-viewport');
   }
 
+  // Add the 'HandheldFriendly' meta tag.
+  if (theme_get_setting('root_handheld_friendly')) {
+    $meta = array(
+      '#tag' => 'meta',
+      '#attributes' => array('name' => 'HandheldFriendly', 'content' => 'true'),
+    );
+
+    drupal_add_html_head($meta, 'root-handheld-friendly');
+  }
+
+  // Add a the 'MobileOptimized' meta tag.
+  if (theme_get_setting('root_mobile_optimized')) {
+    $meta = array(
+      '#tag' => 'meta',
+      '#attributes' => array('name' => 'MobileOptimized', 'content' => 'width'),
+    );
+
+    drupal_add_html_head($meta, 'root-mobile-optimized');
+  }
+
+  // Add the 'cleartype' meta tag.
+  if (theme_get_setting('root_cleartype')) {
+    $meta = array(
+      '#tag' => 'meta',
+      '#attributes' => array('http-equiv' => 'cleartype', 'content' => 'on'),
+    );
+
+    drupal_add_html_head($meta, 'root-cleartype');
+  }
+
   // Send X-UA-Compatible HTTP header to force IE to use the most recent
   // rendering engine or use Chrome's frame rendering engine if available.
   if (theme_get_setting('root_chrome_edge') && drupal_get_http_header('X-UA-Compatible') === NULL) {
-    $meta = array(
-      '#tag' => 'meta',
-      '#attributes' => array(
-        'http-equiv' => 'X-UA-Compatible',
-        'content' => 'IE=edge,chrome=1',
-      ),
-    );
-
-    drupal_add_html_head($meta, 'root-chrome-edge');
+    drupal_add_http_header('X-UA-Compatible', 'IE=edge,chrome=1');
   }
 }
