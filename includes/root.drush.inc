@@ -5,8 +5,6 @@
  * Please supply a file description.
  */
 
-require_once dirname(__FILE__) . '/root.generator.inc';
-
 /**
  * Implements hook_drush_command().
  */
@@ -94,7 +92,7 @@ function drush_root_subtheme_validate($name, $machine_name = NULL) {
 
   // Retrieve the option values from the drush command.
   $destination = drush_get_option('destination', 'all');
-  $machine_name = $machine_name ? $machine_name : drush_get_option('machine_name', _root_generator_generate_theme_name($name));
+  $machine_name = $machine_name ? $machine_name : drush_get_option('machine_name', _root_drush_generate_theme_name($name));
   $starterkit = drush_get_option('starterkit', 'root_starterkit');
 
   // Override the machine-readable name of the theme in case it was generated
@@ -112,12 +110,12 @@ function drush_root_subtheme_validate($name, $machine_name = NULL) {
   }
 
   // Check if the destination is valid.
-  if (!in_array($destination, root_generator_sites())) {
+  if (!in_array($destination, root_drush_sites())) {
     return drush_set_error('ROOT_DESITINATION_INVALID', dt('The destination is invalid.'));
   }
 
   // Check if the chosen base theme or starterkit exists.
-  if (!array_key_exists($starterkit, root_generator_starterkits())) {
+  if (!array_key_exists($starterkit, root_drush_starterkits())) {
     return drush_set_error('ROOT_STARTERKIT_NOT_EXISTS', dt('There is no valid Root theme starterkit with the name @starterkit.', array('@starterkit' => $starterkit)));
   }
 }
@@ -134,11 +132,8 @@ function drush_root_subtheme($name) {
   $subtheme->default = drush_get_option('set-default') !== NULL;
   $subtheme->enable = $subtheme->default || drush_get_option('enable') !== NULL;
 
-  if (root_generator_subtheme_create($subtheme)) {
+  if (root_drush_subtheme_create($subtheme)) {
     drush_log(dt('You have successfully created the theme @theme.', array('@theme' => $subtheme->name)), 'success');
-  }
-  else {
-    drush_set_error('ROOT_SUBTHEME_CREAT_ERROR', dt('There was an error when creating the theme @theme. Please refer to watchdog for further information.', array('@theme' => $subtheme->name)), 'error');
   }
 }
 
@@ -155,12 +150,32 @@ function drush_root_export_validate($theme) {
 
 /**
  * Implements drush_hook_COMMAND().
+ *
+ * Exports the theme settings for the given theme from the database and writes
+ * them into the .info file of that theme.
+ *
+ * @param $name
+ *   The machine-readable name of a theme.
  */
 function drush_root_export($theme) {
   $themes = list_themes();
 
-  if (root_generator_export_theme_settings($theme)) {
-    drush_log(dt('The theme settings for the @theme theme have been successfully exported.', array('@theme' => $themes[$theme]->info['name'])), 'success');
+  // Parse the current content of the .info file so we can append the settings
+  // from the database.
+  $path = drupal_get_path('theme', $theme) . '/' . $theme . '.info';
+  $info = drupal_parse_info_file($path);
+
+  // Remove the old theme settings from the .info file.
+  unset($info['settings']);
+
+  // Insert the theme settings from the database.
+  if ($settings = variable_get('theme_' . $theme . '_settings')) {
+    $info['settings'] = $settings;
+  }
+
+  // Write the data to the .info file of the theme.
+  if (root_drush_write_info_file($theme, $info)) {
+    drush_log(dt('The theme settings for the @theme theme have been exported to the .info file of the theme.', array('@theme' => $themes[$theme]->info['name'])), 'success');
 
     if (drush_get_option('revert')) {
       // Revert the theme settings if the 'revert' option is set and they have
@@ -168,10 +183,12 @@ function drush_root_export($theme) {
       // through the drush command to get the  print messages displazed.
       drush_op('drush_root_revert', $theme);
     }
+
+    return TRUE;
   }
   else {
     // There was an error while exporting the theme settings.
-    drush_set_error('ROOT_EXPORT_ERROR', dt('An error occurred while trying to export the theme settings for the @theme theme.', array('@theme' => $themes[$theme]->info['name'])));
+    return drush_set_error('ROOT_EXPORT_ERROR', dt('An error occurred while trying to export the theme settings for the @theme theme.', array('@theme' => $themes[$theme]->info['name'])));
   }
 }
 
@@ -188,10 +205,22 @@ function drush_root_revert_validate($theme) {
 
 /**
  * Implements drush_hook_COMMAND().
+ *
+ * Delete the theme settings that have been stored in the database and thereby
+ * reverts them to the default settings from the .info file.
+ *
+ * @param $name
+ *   The machine-readable name of a theme.
  */
 function drush_root_revert($theme) {
   $themes = list_themes();
-  root_generator_revert_theme_settings($theme);
+  // Delete the theme settings variable for the given theme.
+  variable_del('theme_' . $theme . '_settings');
+
+  // Rebuild the theme data for good measure.
+  drupal_theme_rebuild();
+  system_rebuild_theme_data();
+
   drush_log(dt('You have successfully reverted the theme settings for the @theme theme.', array('@theme' => $themes[$theme]->info['name'])), 'success');
 }
 
@@ -217,7 +246,7 @@ function drush_root_download_libraries_validate() {
  */
 function drush_root_download_libraries() {
   foreach (root_theme_libraries_info() as $library => $info) {
-    if (!empty($info['download url']) && _root_download_library($library, $info)) {
+    if (!empty($info['download url']) && root_drush_download_library($library, $info)) {
       drush_log(dt('Success'), 'success');
     }
   }
@@ -235,7 +264,7 @@ function drush_root_download_libraries() {
  *   TRUE if the library could be downloaded and extracted successfully, FALSE
  *   otherwise.
  */
-function _root_download_library($library, $info) {
+function root_drush_download_library($library, $info) {
   // Retrieve the path of the library.
   if (!$path = libraries_get_path($library)) {
     if (!$site = drush_site_path()) {
@@ -285,4 +314,301 @@ function _root_download_library($library, $info) {
   }
 
   return TRUE;
+}
+
+/**
+ * Retrieves all themes that can be used as starterkits for a given base theme.
+ *
+ * @param $base
+ *   (Optional) The machine-readable name of a base theme to filter all the
+ *   available starterkits for.
+ *
+ * @return array
+ *   An array of theme names keyed with the machine-readable name of each theme.
+ */
+function root_drush_starterkits($base = NULL) {
+  $options = array();
+
+  // Retrieve all the possible starterkits.
+  foreach (list_themes() as $name => $theme) {
+    $info = $theme->info;
+
+    // A starterkit is always flagged as such in the .info file.
+    if (!empty($info['starterkit']) && !empty($info['base theme']) && (!isset($base) || $info['base theme'] == $base)) {
+      $options[$name] = $info['name'] . (!empty($info['description']) ? ': ' . $info['description'] : '');
+    }
+  }
+
+  return $options;
+}
+
+/**
+ * Recursively rewrites (and renames) all files in a given path.
+ *
+ * @param $path
+ *   The path to rewrite all files in.
+ * @param $search
+ *   The string(s) to look for when replacing the file names and contents. Can
+ *   be an array or a string.
+ * @param $replace
+ *   The string(s) to replace $search with. Can be an array or a string.
+ *
+ * @return bool
+ *   TRUE if the operation succeeded, FALSE otherwise.
+ *
+ * @see root_drush_replace_contents()
+ * @see str_replace()
+ */
+function root_drush_rewrite_recursive($path, $search, $replace) {
+  if ($path !== ($new = str_replace($search, $replace, $path))) {
+    // First, try to rename (move) the file if the name was changed.
+    if (!drush_move_dir($path, $new, TRUE)) {
+      return FALSE;
+    };
+  }
+
+  if (is_dir($new)) {
+    // If the file actually is a directory, proceed with the recursion.
+    $directory = dir($new);
+
+    while (FALSE !== ($read = $directory->read())) {
+      if ($read != '.' && $read != '..' ) {
+        if (!root_drush_rewrite_recursive($new . '/' . $read, $search, $replace)) {
+          return FALSE;
+        }
+      }
+    }
+
+    $directory->close();
+  }
+  elseif (is_file($new)) {
+    // If it is a file, try to replace its contents.
+    $before = file_get_contents($new);
+    if ($before !== ($after = str_replace($search, $replace, $before))) {
+      if (file_unmanaged_save_data($after, $new, FILE_EXISTS_REPLACE) === FALSE) {
+        return FALSE;
+      }
+    }
+  }
+
+  return TRUE;
+}
+
+/**
+ * Recursively builds an .info file structure from an array.
+ *
+ * @param $array
+ *   The array to build the .info file from.
+ * @param $prefix
+ *   (Optional) Used internally to forward the current prefix (level of nesting)
+ *   for the keys.
+ *
+ * @return string
+ *   A .info file string.
+ */
+function root_drush_build_info_file($array, $prefix = FALSE) {
+  $info = '';
+
+  foreach ($array as $key => $value) {
+    if (is_array($value)) {
+      // This is an array, let's proceed with the next level.
+      $info .= root_drush_build_info_file($value, (!$prefix ? $key : "{$prefix}[{$key}]"));
+    }
+    else {
+      // Escape all single quotes.
+      $value = str_replace("'", "\'", $value);
+      // Wrap the value in single quotes if it has any trailing or leading
+      // whitespace or it is an empty string from the start.
+      $value = $value === '' || trim($value) != $value ? "'" . $value . "'" : $value;
+      // If the key is numeric remove it entirely (simple brackets are enough in
+      // this case).
+      $key = is_numeric($key) ? '' : $key;
+
+      $info .= $prefix ? ("{$prefix}[" . $key .']') : $key;
+      $info .= ' = ' . $value . "\n";
+    }
+  }
+
+  return $info;
+}
+
+/**
+ * Helper function for creating and saving a .info file.
+ *
+ * @param $name
+ *   The name of the .info file (equivalent to the machine-readable name of the
+ *   theme that the .info file belongs to).
+ * @param $data
+ *   The content of the .info file.
+ * @param $destination
+ *   (Optional) The path in which the .info file should be saved. Defaults to
+ *   the path of the theme as defined by $name.
+ *
+ * @return bool
+ *   TRUE if the .info file was successfully saved, FALSE otherwise.
+ */
+function root_drush_write_info_file($name, $data, $destination = NULL) {
+  $destination = isset($destination) ? $destination : drupal_get_path('theme', $name);
+
+  if (!empty($destination)) {
+    $data = is_array($data) ? root_drush_build_info_file($data) : $data;
+    return file_unmanaged_save_data($data, $destination . '/' . $name . '.info', FILE_EXISTS_REPLACE);
+  }
+
+  return FALSE;
+}
+
+/**
+ * Creates a subtheme from any given starterkit.
+ *
+ * @param $subtheme
+ *   An object containing all the required definitions for creating a subtheme.
+ *   The available properties are:
+ *
+ *   - 'name': The human-readable name of the subtheme.
+ *   - 'machine_name': The machine-readable name of the subtheme.
+ *   - 'path': The destination that the subtheme should be placed in relative to
+ *     the Drupal root.
+ *   - 'starterkit': The machine-readable name of the starterkit that should be
+ *     used for creating the subtheme.
+ *   - 'default': (optional) Whether the subtheme should be enabled and set as
+ *     the default theme after it has been created.
+ *   - 'enable': (ptional) Whether the subtheme should be enabled after it has
+ *     been created.
+ *
+ * @return bool
+ *   TRUE if the subtheme could be successfully created, FALSE otherwise.
+ */
+function root_drush_subtheme_create($subtheme) {
+  // Check whether the destination path does not exist and bail out if it does
+  // so we don't delete any important data by accident.
+  if (is_dir($subtheme->path)) {
+    return drush_set_error('ROOT_SUBTHEME_PATH', dt('The path @path already exists.', array('@path' => $subtheme->path)));
+  }
+
+  $destination = dirname($subtheme->path);
+  if (!is_writable($destination) && !file_prepare_directory($destination, FILE_CREATE_DIRECTORY | FILE_MODIFY_PERMISSIONS)) {
+    return drush_set_error('ROOT_SUBTHEME_PATH', dt('The path @path is not writable.', array('@path' => $subtheme->path)));
+  }
+
+  $themes = list_themes();
+  // Try to copy the starterkit to the destination path of the new subtheme.
+  $source = drupal_get_path('theme', $subtheme->starterkit);
+  if (!drush_copy_dir($source, $subtheme->path)) {
+    return drush_set_error('ROOT_STARTERKIT', t('The starterkit @starterkit could not be copied.', array('@starterkit' => $themes[$subtheme->starterkit]->info['name'])));
+  }
+
+  // Recursively rewrite the file names and contents of all the files that are
+  // now in the subtheme's directory to represent the human- and
+  // machine-readable names of the subtheme.
+  $relative = _root_relative_path($subtheme->path, drupal_get_path('theme', $themes[$subtheme->starterkit]->info['base theme']));
+  $search = array($subtheme->starterkit, $themes[$subtheme->starterkit]->info['name'], 'BASETHEME_PATH_RELATIVE');
+  $replace = array($subtheme->machine_name, $subtheme->name, $relative);
+  root_drush_rewrite_recursive($subtheme->path, $search, $replace);
+
+  // Parse the contents of the current .info file (provided by the starterkit).
+  $subtheme->info = drupal_parse_info_file($subtheme->path . '/' . $subtheme->machine_name . '.info');
+  // Unset all unneeded (and potentially hindering) properties in the .info file
+  // of the subtheme.
+  unset($subtheme->info['starterkit'], $subtheme->info['hidden'], $subtheme->info['locked'], $subtheme->info['project'], $subtheme->info['datestamp']);
+
+  // Put the name and description, as well as a 'dummy' version for the new
+  // subtheme in place.
+  $subtheme->info['name'] = $subtheme->name;
+  $subtheme->info['description'] = $subtheme->description;
+  $subtheme->info['version'] = '1.x';
+
+  // Overwrite the existing .info file with the changed values.
+  root_drush_write_info_file($subtheme->machine_name, $subtheme->info, $subtheme->path);
+
+  // Rebuild the theme caches so that we can do some final tasks.
+  drupal_theme_rebuild();
+  system_rebuild_theme_data();
+
+  if (!empty($subtheme->enable) || !empty($subtheme->default)) {
+    // Enable the subtheme.
+    theme_enable(array($subtheme->machine_name));
+
+    if (!empty($subtheme->default)) {
+      // Make the newly created subtheme the default theme.
+      variable_set('theme_default', $subtheme->machine_name);
+    }
+  }
+
+  return TRUE;
+}
+
+/**
+ * Retrieve an array of available sites from the sites.php.
+ *
+ * @return
+ *   An array that contains all the available sites in a multisite environment.
+ */
+function root_drush_sites() {
+  $sites = array('all' => 'all');
+
+  // Load the available sites (multisite installation) from the sites.php file
+  // if it exists.
+  if (file_exists(DRUPAL_ROOT . '/sites/sites.php')) {
+    include DRUPAL_ROOT . '/sites/sites.php';
+  }
+
+  // The 'all' destination is always available.
+  return array_keys(array_merge($sites));
+}
+
+/**
+ * Helper function for generating a valid machine-readable name for a theme from
+ * any string.
+ *
+ * @param $name
+ *   The string to generate the machine-readable name from.
+ *
+ * @return string
+ *   The generated machine-readable name.
+ */
+function _root_drush_generate_theme_name($string) {
+  // Machine-readable names have to start with a lowercase letter.
+  $string = preg_replace('/^[^a-z]+/', '', strtolower($string));
+  // Machine-readable may only contain alphanumeric characters and underscores.
+  $string = preg_replace('/[^a-z0-9_]+/', '_', $string);
+  // Trim all trailing and leading underscores.
+  $string = trim($string, '_');
+
+  return $string;
+}
+
+/**
+ * @param $from
+ * @param $to
+ * @return string
+ */
+function _root_relative_path($from, $to) {
+  $from = explode('/', $from);
+  $to = explode('/', $to);
+  $relative = $to;
+
+  foreach ($from as $depth => $dir) {
+    // Find the first non-matching directory.
+    if ($dir === $to[$depth]) {
+      // Ignore this directory.
+      array_shift($relative);
+    }
+    else {
+      // Get the number of remaining directories to $from.
+      $remaining = count($from) - $depth;
+
+      if ($remaining > 0) {
+        // Add traversals up to the first matching directory.
+        $length = (count($relative) + $remaining) * -1;
+        $relative = array_pad($relative, $length, '..');
+        break;
+      }
+      else {
+        $relative[0] = './' . $relative[0];
+      }
+    }
+  }
+
+  return implode('/', $relative);
 }

@@ -59,6 +59,17 @@ if (root_extension_is_enabled('development') && theme_get_setting('root_rebuild_
 }
 
 /**
+ * Implements hook_preprocess().
+ */
+function root_preprocess(&$variables) {
+  // Copy over the classes array into the attributes array.
+  if (!empty($variables['classes_array'])) {
+    $variables['attributes_array']['class'] = !empty($variables['attributes_array']['class']) ? $variables['attributes_array']['class'] + $variables['classes_array']: $variables['classes_array'];
+    $variables['attributes_array']['class'] = array_unique($variables['attributes_array']['class']);
+  }
+}
+
+/**
  * Implements hook_element_info_alter().
  */
 function root_element_info_alter(&$elements) {

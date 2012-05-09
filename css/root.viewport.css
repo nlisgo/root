@@ -1,5 +1,0 @@
-.root-viewport-widget-wrapper { position: fixed; max-width: 100%; width: 300px; bottom: 0; right: 0; z-index: 9999; }
-
-.root-viewport-widget-buttons { overflow: hidden; *zoom: 1; }
-
-.root-viewport-widget-button { -webkit-border-radius: 5px; -moz-border-radius: 5px; -ms-border-radius: 5px; -o-border-radius: 5px; border-radius: 5px; height: 30px; width: 30px; background-color: rgba(0, 0, 0, 0.5); float: left; }
