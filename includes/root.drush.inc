@@ -160,21 +160,30 @@ function drush_root_export_validate($theme) {
 function drush_root_export($theme) {
   $themes = list_themes();
 
+  // Insert the theme settings from the database.
+  if ($settings = variable_get('theme_' . $theme . '_settings')) {
+    foreach (array_merge(_system_default_theme_features(), root_extensions()) as $feature) {
+      // Remove the 'toggle_foobar' elements from the theme settings array.
+      unset($settings['toggle_' . $feature]);
+    }
+  }
+  elseif (!drush_confirm(dt('There are no theme settings for @theme stored in the database. Do you want to purge the theme settings from the .info file too?', array('@theme' => $themes[$theme]->info['name'])))) {
+    return;
+  }
+
   // Parse the current content of the .info file so we can append the settings
   // from the database.
   $path = drupal_get_path('theme', $theme) . '/' . $theme . '.info';
-  $info = drupal_parse_info_file($path);
+  $data = file_get_contents($path);
 
   // Remove the old theme settings from the .info file.
-  unset($info['settings']);
+  $data = trim(preg_replace('/^settings\[.*\].*\n?/mi', '', $data));
 
-  // Insert the theme settings from the database.
-  if ($settings = variable_get('theme_' . $theme . '_settings')) {
-    $info['settings'] = $settings;
-  }
+  // Append the exported theme settings to the .info file if there are any.
+  $data = $settings ? $data . "\n\n" . root_drush_build_info_file($settings, 'settings') : $data;
 
   // Write the data to the .info file of the theme.
-  if (root_drush_write_info_file($theme, $info)) {
+  if (file_unmanaged_save_data($data, $path, FILE_EXISTS_REPLACE)) {
     drush_log(dt('The theme settings for the @theme theme have been exported to the .info file of the theme.', array('@theme' => $themes[$theme]->info['name'])), 'success');
 
     if (drush_get_option('revert')) {

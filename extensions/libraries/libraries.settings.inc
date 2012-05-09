@@ -103,6 +103,7 @@ function root_library_pie_selectors_submit($form, &$form_state) {
 
   // Generate a CSS file for the provided selectors if the inclusion method is
   // set to 'pie.htc' or 'pie.php'.
+  $selectors = array();
   if (!empty($values['selectors'])) {
     // Sanitize the selectors.
     $selectors = array_map('trim', explode("\n", $values['selectors']));
@@ -126,10 +127,9 @@ function root_library_pie_selectors_submit($form, &$form_state) {
     file_unmanaged_delete($destination . '/pie-selectors.css');
   }
 
-  // Set the selectors options to TRUE or FALSE depending on whether there are
-  // selectors to be loaded or not.
+  // Save the selectors as an array.
   $parents = array('#parents' => array('root_libraries', 'css3pie', 'selectors'));
-  form_set_value($parents, !empty($values['selectors']), $form_state);
+  form_set_value($parents, $selectors, $form_state);
 }
 
 
@@ -140,25 +140,18 @@ function root_library_pie_options_form(&$element, &$form, $form_state, $library,
   // Give the default variant a proper label.
   $element['variant']['#options']['_default'] = t('HTML Component (default)');
 
-  // Pull the theme key from the form arguments.
-  $theme = $form_state['build_info']['args'][0];
-  // Load the contents of the current version of the PIE selector css file.
-  $css = 'public://root/' . $theme . '/pie-selectors.css';
-  $js = 'public://root/' . $theme . '/pie-selectors.js';
+  // Pull the selectors from the theme settings.
+  $settings = theme_get_setting('root_libraries');
 
-  // Load the current PIE selectors file if one exists.
-  if ($selectors = @file_get_contents($css)) {
-    // We need to sanitize the output for our textarea.
-    $selectors = preg_replace('/\{behavior:url\((.*)\)\}/', '', $selectors);
-    $selectors = array_filter(array_map('trim', explode(',', $selectors)));
-    $selectors = implode("\n", $selectors);
-  }
+  // The generated CSS file is stored in the public file system.
+  $theme = $form_state['build_info']['args'][0];
+  $destination = file_create_url('public://root/' . $theme);
 
   $element['selectors'] = array(
     '#title' => t('Selectors'),
     '#type' => 'textarea',
-    '#description' => t("You can use this textarea to define all the CSS rules that you want to apply the PIE behavior to. Define one CSS selector per line. Note: The value of this field is not stored as a theme setting as it directly gets written to a <a href=\"!css\">.css</a> file (as well as a <a href=\"!js\">.js</a> file) in the public file system to not clutter the theme settings array. Therefore, it won't get exported if you choose to export your theme settings.", array('!css' => file_create_url($css), '!js' => file_create_url($js))),
-    '#default_value' => $selectors ? $selectors : '',
+    '#description' => t("You can use this textarea to define all the CSS rules that you want to apply the PIE behavior to. Define one CSS selector per line. Note: The selectors submitted with this field get directly cached in a <a href=\"!css\">.css</a> file (as well as a <a href=\"!js\">.js</a> file) in the public file system to not clutter the theme settings array. Therefore, it won't get exported if you choose to export your theme settings.", array('!css' => $destination . '/pie-selectors.css', '!js' => $destination . '/pie-selectors.js')),
+    '#default_value' => !empty($settings['css3pie']['selectors']) ? implode("\n", $settings['css3pie']['selectors']) : '',
   );
 
   // We need to provide a submit handler to create a CSS file for the

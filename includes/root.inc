@@ -225,30 +225,6 @@ function root_extensions($theme = NULL) {
 }
 
 /**
- * Checks whether an extension is enabled.
- *
- * Core maintains the state of it's features by caching 'toggle' flags in the
- * theme settings array. This only works for the default features provided by
- * core and is a little bit wonky as those are not really theme settings. Hence,
- * we need a custom function for checking whether an extension is enabled.
- *
- * @param $extension
- *   The name of an extension.
- * @param $theme
- *   (Optional) The key (machine-readable name) of a theme. Defaults to the key
- *   of the current theme.
- *
- * @return bool
- *   TRUE if the extension is enabled, FALSE otherwise.
- *
- * @see theme_get_setting()
- * @see root_extensions()
- */
-function root_extension_is_enabled($extension, $theme = NULL) {
-  return in_array($extension, root_extensions($theme));
-}
-
-/**
  * Retrieves the full info array of a theme.
  *
  * @param $theme

@@ -37,6 +37,12 @@ if ($GLOBALS['theme'] == $GLOBALS['theme_key'] && !$static = &drupal_static('the
     theme_get_setting('foo');
     // Extract the theme settings from the previously populated static cache.
     $static = &drupal_static('theme_get_setting');
+
+    // Write the toggled state of all extensions into the theme settings.
+    foreach (root_extensions() as $extension) {
+      $static[$GLOBALS['theme']]['toggle_' . $extension] = TRUE;
+    }
+
     // Cache the theme settings in the database.
     cache_set('theme_settings:' . $GLOBALS['theme'], $static[$GLOBALS['theme']]);
   }
@@ -48,7 +54,7 @@ if ($GLOBALS['theme'] == $GLOBALS['theme_key'] && !$static = &drupal_static('the
  * declaration to make sure that the registry is rebuilt before invoking any
  * theme hooks.
  */
-if (root_extension_is_enabled('development') && theme_get_setting('root_rebuild_theme_registry') &&  user_access('administer site configuration')) {
+if (theme_get_setting('toggle_development') && theme_get_setting('root_rebuild_theme_registry') &&  user_access('administer site configuration')) {
   drupal_theme_rebuild();
 
   if (flood_is_allowed('root_' . $GLOBALS['theme'] . '_rebuild_registry_warning', 3)) {
@@ -82,7 +88,7 @@ function root_element_info_alter(&$elements) {
  * Implements hook_css_alter().
  */
 function root_css_alter(&$css) {
-  if (root_extension_is_enabled('manipulation') && $exclude = theme_get_setting('root_css_exclude')) {
+  if (theme_get_setting('toggle_manipulation') && $exclude = theme_get_setting('root_css_exclude')) {
     root_exclude_assets($css, $exclude);
   }
 
@@ -102,7 +108,7 @@ function root_css_alter(&$css) {
  * Implements hook_js_alter().
  */
 function root_js_alter(&$js) {
-  if (root_extension_is_enabled('manipulation') && $exclude = theme_get_setting('root_js_exclude')) {
+  if (theme_get_setting('toggle_manipulation') && $exclude = theme_get_setting('root_js_exclude')) {
     root_exclude_assets($js, $exclude);
   }
 
@@ -173,6 +179,30 @@ function root_theme_registry_alter(&$registry) {
       $hook = $key . '_extension_' . $extension . '_theme_registry_alter';
       if (function_exists($hook)) {
         $hook($registry);
+      }
+    }
+  }
+}
+
+
+/**
+ * Implements hook_page_alter().
+ *
+ * Look for the last block in the region. This is impossible to determine from
+ * within a preprocess_block function.
+ */
+function root_page_alter(&$page) {
+  // Look in each visible region for blocks.
+  foreach (system_region_list($GLOBALS['theme'], REGIONS_VISIBLE) as $region => $name) {
+    if (!empty($page[$region])) {
+      // Find the last block in the region.
+      $blocks = array_reverse(element_children($page[$region]));
+      while ($blocks && !isset($page[$region][$blocks[0]]['#block'])) {
+        array_shift($blocks);
+      }
+
+      if ($blocks) {
+        $page[$region][$blocks[0]]['#block']->last_in_region = TRUE;
       }
     }
   }
