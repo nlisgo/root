@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Helper functions for the Root base theme.
+ * Helper functions for the Omega base theme.
  */
 
 /**
@@ -16,7 +16,7 @@
  * @return array
  *   An array of all themes in the trail, keyed by theme key.
  */
-function root_theme_trail($theme = NULL) {
+function omega_theme_trail($theme = NULL) {
   $theme = isset($theme) ? $theme : $GLOBALS['theme_key'];
   $static = &drupal_static(__FUNCTION__);
 
@@ -52,10 +52,10 @@ function root_theme_trail($theme = NULL) {
  *
  * @see drupal_pre_render_styles()
  */
-function root_css_preprocessor($elements) {
+function omega_css_preprocessor($elements) {
   foreach ($elements['#items'] as &$item) {
     if ($item['type'] == 'file' && $item['preprocess'] && $item['media'] != 'all') {
-      $item['data'] = root_css_cache_media_queries($item);
+      $item['data'] = omega_css_cache_media_queries($item);
       $item['media'] = 'all';
     }
   }
@@ -71,7 +71,7 @@ function root_css_preprocessor($elements) {
  *
  * @see drupal_build_css_cache().
  */
-function root_css_cache_media_queries($item) {
+function omega_css_cache_media_queries($item) {
   $map = variable_get('drupal_css_cache_files', array());
   $key = hash('sha256', serialize($item));
   $uri = isset($map[$key]) ? $map[$key] : NULL;
@@ -81,8 +81,8 @@ function root_css_cache_media_queries($item) {
     $base = file_create_url($item['data']);
     $base = substr($base, 0, strrpos($base, '/'));
 
-    if (substr($base, 0, strlen($GLOBALS['base_root'])) == $GLOBALS['base_root']) {
-      $base = substr($base, strlen($GLOBALS['base_root']));
+    if (substr($base, 0, strlen($GLOBALS['base_omega'])) == $GLOBALS['base_omega']) {
+      $base = substr($base, strlen($GLOBALS['base_omega']));
     }
 
     _drupal_build_css_path(NULL, $base . '/');
@@ -136,11 +136,11 @@ function root_css_cache_media_queries($item) {
  * @return array
  *   The purged array.
  */
-function root_exclude_assets(&$elements, $exclude) {
+function omega_exclude_assets(&$elements, $exclude) {
   // For optimization reasons we load the theme trail to check whether a
   // namespace matches the machine-readable name of one of the themes in the
   // trail.
-  $trail = root_theme_trail();
+  $trail = omega_theme_trail();
 
   foreach ($exclude as $item) {
     $path = '';
@@ -202,17 +202,17 @@ function root_exclude_assets(&$elements, $exclude) {
  *   The theme info array of the passed or current theme.
  *
  * @see _system_default_theme_features()
- * @see root_extension_development_theme_settings_form_alter()
- * @see root_extension_development_theme_registry_alter()
+ * @see omega_extension_development_theme_settings_form_alter()
+ * @see omega_extension_development_theme_registry_alter()
  */
-function root_extensions($theme = NULL) {
+function omega_extensions($theme = NULL) {
   $features = &drupal_static(__FUNCTION__);
   $theme = isset($theme) ? $theme : $GLOBALS['theme_key'];
 
   if (!isset($features[$theme])) {
     $features[$theme] = array();
-    foreach (array_reverse(root_theme_trail($theme)) as $key => $title) {
-      $info = root_theme_info($key);
+    foreach (array_reverse(omega_theme_trail($theme)) as $key => $title) {
+      $info = omega_theme_info($key);
       if (!empty($info['features'])) {
         // The default theme features are not considered 'extensions' per-se.
         $features[$theme] = array_diff($info['features'], _system_default_theme_features());
@@ -234,7 +234,7 @@ function root_extensions($theme = NULL) {
  * @return array
  *   The theme info array of the passed or current theme.
  */
-function root_theme_info($theme = NULL) {
+function omega_theme_info($theme = NULL) {
   $theme = isset($theme) ? $theme : $GLOBALS['theme_key'];
 
   // If this is the current theme, just load the theme info from the globals.
@@ -262,10 +262,10 @@ function root_theme_info($theme = NULL) {
  *
  * @see module_load_include()
  */
-function root_theme_trail_load_include($type, $name, $theme = NULL) {
+function omega_theme_trail_load_include($type, $name, $theme = NULL) {
   $theme = isset($theme) ? $theme : $GLOBALS['theme_key'];
 
-  foreach (root_theme_trail($theme) as $key => $title) {
+  foreach (omega_theme_trail($theme) as $key => $title) {
     // Check if the requested file exists in any of the themes in the theme
     // trail and include all occurrences.
     $file = DRUPAL_ROOT . '/' . drupal_get_path('theme', $key) . "/$name.$type";
@@ -292,12 +292,12 @@ function root_theme_trail_load_include($type, $name, $theme = NULL) {
  *
  * @see module_invoke_all()
  */
-function root_invoke_all($hook, $theme = NULL) {
+function omega_invoke_all($hook, $theme = NULL) {
   $args = func_get_args();
   // Remove $hook and $theme from the arguments.
   unset($args[0], $args[1]);
   $return = array();
-  foreach (root_theme_trail($theme) as $key => $name) {
+  foreach (omega_theme_trail($theme) as $key => $name) {
     $function = $key . '_' . $hook;
     if (function_exists($function)) {
       $result = call_user_func_array($function, $args);
@@ -337,7 +337,7 @@ function root_invoke_all($hook, $theme = NULL) {
  *
  * @see drupal_array_get_nested_value()
  */
-function root_get_nested_value(&$object, array $parents, &$key_exists = NULL) {
+function omega_get_nested_value(&$object, array $parents, &$key_exists = NULL) {
   $ref = &$object;
   foreach ($parents as $parent) {
     if (is_array($ref) && array_key_exists($parent, $ref)) {
@@ -365,9 +365,9 @@ function root_get_nested_value(&$object, array $parents, &$key_exists = NULL) {
  *
  * @see hook_libraries_info()
  */
-function root_theme_libraries_info() {
+function omega_theme_libraries_info() {
   $libraries = array();
-  foreach (root_invoke_all('root_theme_libraries_info') as $library => $info) {
+  foreach (omega_invoke_all('omega_theme_libraries_info') as $library => $info) {
     $libraries[$library] = libraries_info_defaults($info, $library);
   }
   return $libraries;

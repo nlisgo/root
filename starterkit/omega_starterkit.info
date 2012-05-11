@@ -1,9 +1,9 @@
-name = Default Root Starterkit
-description = Default Root Starterkit for the Root base theme.
+name = Default Omega Starterkit
+description = Default Omega Starterkit for the Omega base theme.
 screenshot = screenshot.png
 engine = phptemplate
 core = 7.x
-base theme = root
+base theme = omega
 starterkit = TRUE
 hidden = TRUE
 

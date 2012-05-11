@@ -3,7 +3,7 @@
 /**
  * Implements hook_preprocess_region().
  */
-function root_preprocess_region(&$variables) {
+function omega_preprocess_region(&$variables) {
   // Sidebar regions common template suggestion and class for all sidebars.
   if (strpos($variables['region'], 'sidebar_') === 0) {
     $variables['attributes_array']['class'][] = 'sidebar';

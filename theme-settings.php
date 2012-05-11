@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Theme settings file for the Root base theme.
+ * Theme settings file for the Omega base theme.
  */
 
 require_once dirname(__FILE__) . '/template.php';
@@ -10,7 +10,7 @@ require_once dirname(__FILE__) . '/template.php';
 /**
  * Implements hook_form_FORM_alter().
  */
-function root_form_system_theme_settings_alter(&$form, $form_state) {
+function omega_form_system_theme_settings_alter(&$form, $form_state) {
   // General "alters" use a form id. Settings should not be set here. The only
   // thing useful about this is if you need to alter the form for the running
   // theme and *not* the theme setting. @see http://drupal.org/node/943212
@@ -24,7 +24,7 @@ function root_form_system_theme_settings_alter(&$form, $form_state) {
   $form['#suffix'] = '</div>';
 
   // Add some custom styling to our theme settings form.
-  $form['#attached']['css'][] = drupal_get_path('theme', 'root') . '/css/root.admin.css';
+  $form['#attached']['css'][] = drupal_get_path('theme', 'omega') . '/css/omega.admin.css';
 
   // Collapse all the core theme settings tabs in order to have the form actions
   // visible all the time without having to scroll.
@@ -35,16 +35,16 @@ function root_form_system_theme_settings_alter(&$form, $form_state) {
     }
   }
 
-  $form['root'] = array(
+  $form['omega'] = array(
     '#type' => 'vertical_tabs',
     '#weight' => -10,
   );
 
   // Load the theme settings for all enabled extensions.
-  foreach (root_extensions() as $extension) {
+  foreach (omega_extensions() as $extension) {
     // Load all the implementations for this extensions and invoke the according
     // hooks.
-    root_theme_trail_load_include('inc', 'extensions/' . $extension . '/' . $extension . '.settings');
+    omega_theme_trail_load_include('inc', 'extensions/' . $extension . '/' . $extension . '.settings');
 
     // By default, each extension resides in a vertical tab.
     $element = array(
@@ -52,7 +52,7 @@ function root_form_system_theme_settings_alter(&$form, $form_state) {
       '#title' => t(filter_xss_admin(ucfirst($extension))),
     );
 
-    foreach (root_theme_trail() as $theme => $title) {
+    foreach (omega_theme_trail() as $theme => $title) {
       $function = $theme . '_extension_' . $extension . '_theme_settings_form_alter';
 
       if (function_exists($function)) {
@@ -63,18 +63,18 @@ function root_form_system_theme_settings_alter(&$form, $form_state) {
     if (element_children($element)) {
       // Append the extension form to the theme settings form if it has any
       // children.
-      $form['root']['root_' . $extension] = $element;
+      $form['omega']['omega_' . $extension] = $element;
     }
   }
 
   // We need a custom form submit handler for processing some of the values.
-  $form['#submit'][] = 'root_theme_settings_form_submit';
+  $form['#submit'][] = 'omega_theme_settings_form_submit';
 }
 
 /**
  * Form submit handler for the theme settings form.
  */
-function root_theme_settings_form_submit($form, &$form_state) {
+function omega_theme_settings_form_submit($form, &$form_state) {
   // Clear the theme settings cache.
   cache_clear_all('theme_settings:' . $form_state['build_info']['args'][0], 'cache');
 
@@ -88,5 +88,5 @@ function root_theme_settings_form_submit($form, &$form_state) {
 
   // This is a relict from the vertical tabs and should be removed so it doesn't
   // end up in the theme settings array.
-  unset($form_state['values']['root__active_tab']);
+  unset($form_state['values']['omega__active_tab']);
 }

@@ -8,18 +8,18 @@
 /**
  * Implements hook_extension_EXTENSION_theme_settings_form_alter().
  */
-function root_extension_libraries_theme_settings_form_alter($element, &$form, $form_state) {
+function omega_extension_libraries_theme_settings_form_alter($element, &$form, $form_state) {
   if (module_exists('libraries')) {
-    $libraries = theme_get_setting('root_libraries');
+    $libraries = theme_get_setting('omega_libraries');
 
-    foreach (root_theme_libraries_info() as $library => $info) {
+    foreach (omega_theme_libraries_info() as $library => $info) {
       if (isset($info['theme'])) {
         $element[$library]['status'] = array(
           '#type' => 'checkbox',
           '#title' => isset($info['vendor url']) ? t('@library by <a href="!url">@vendor</a>', array('@library' => $info['name'], '!url' => $info['vendor url'], '@vendor' => $info['vendor'])) : t('@library by @vendor', array('@library' => $info['name'], '@vendor' => $info['vendor'])),
           '#description' => $info['description'],
           '#default_value' => !empty($libraries[$library]['status']),
-          '#parents' => array('root_libraries', $library, 'status'),
+          '#parents' => array('omega_libraries', $library, 'status'),
         );
 
         $options = array();
@@ -37,7 +37,7 @@ function root_extension_libraries_theme_settings_form_alter($element, &$form, $f
               '#title' => t('Variant'),
               '#options' => $variants,
               '#default_value' => !empty($libraries[$library]['variant']) ? $libraries[$library]['variant'] : '_default',
-              '#parents' => array('root_libraries', $library, 'variant'),
+              '#parents' => array('omega_libraries', $library, 'variant'),
             );
           }
         }
@@ -56,12 +56,12 @@ function root_extension_libraries_theme_settings_form_alter($element, &$form, $f
             '#title' => t('Options'),
             '#states' => array(
               'visible' => array(
-                ':input[name="root_libraries[' . $library . '][status]"]' => array('checked' => TRUE),
+                ':input[name="omega_libraries[' . $library . '][status]"]' => array('checked' => TRUE),
               ),
             ),
-            '#parents' => array('root_libraries', $library),
+            '#parents' => array('omega_libraries', $library),
             '#tree' => TRUE,
-            '#attributes' => array('class' => array('root-settings-container')),
+            '#attributes' => array('class' => array('omega-settings-container')),
             '#collapsible' => TRUE,
             '#collapsed' => TRUE,
           ) + $options;
@@ -69,7 +69,7 @@ function root_extension_libraries_theme_settings_form_alter($element, &$form, $f
       }
     }
 
-    $form['#submit'][] = 'root_extension_libraries_theme_settings_form_submit';
+    $form['#submit'][] = 'omega_extension_libraries_theme_settings_form_submit';
   }
 
   return $element;
@@ -78,9 +78,9 @@ function root_extension_libraries_theme_settings_form_alter($element, &$form, $f
 /**
  * Theme settings form submit handler for the libraries extension.
  */
-function root_extension_libraries_theme_settings_form_submit($form, &$form_state) {
-  if (!empty($form_state['values']['root_libraries'])) {
-    $values = &$form_state['values']['root_libraries'];
+function omega_extension_libraries_theme_settings_form_submit($form, &$form_state) {
+  if (!empty($form_state['values']['omega_libraries'])) {
+    $values = &$form_state['values']['omega_libraries'];
 
     foreach ($values as &$settings) {
       if (isset($settings['variant']) && $settings['variant'] == '_default') {
@@ -94,12 +94,12 @@ function root_extension_libraries_theme_settings_form_submit($form, &$form_state
 /**
  * Theme settings form submit handler for handling the PIE selectors.
  */
-function root_library_pie_selectors_submit($form, &$form_state) {
-  $values = &$form_state['values']['root_libraries']['css3pie'];
+function omega_library_pie_selectors_submit($form, &$form_state) {
+  $values = &$form_state['values']['omega_libraries']['css3pie'];
 
   // The generated CSS file is stored in the public file system.
   $theme = $form_state['build_info']['args'][0];
-  $destination = 'public://root/' . $theme;
+  $destination = 'public://omega/' . $theme;
 
   // Generate a CSS file for the provided selectors if the inclusion method is
   // set to 'pie.htc' or 'pie.php'.
@@ -128,7 +128,7 @@ function root_library_pie_selectors_submit($form, &$form_state) {
   }
 
   // Save the selectors as an array.
-  $parents = array('#parents' => array('root_libraries', 'css3pie', 'selectors'));
+  $parents = array('#parents' => array('omega_libraries', 'css3pie', 'selectors'));
   form_set_value($parents, $selectors, $form_state);
 }
 
@@ -136,16 +136,16 @@ function root_library_pie_selectors_submit($form, &$form_state) {
 /**
  * CSS3PIE Library options form callback.
  */
-function root_library_pie_options_form(&$element, &$form, $form_state, $library, $info) {
+function omega_library_pie_options_form(&$element, &$form, $form_state, $library, $info) {
   // Give the default variant a proper label.
   $element['variant']['#options']['_default'] = t('HTML Component (default)');
 
   // Pull the selectors from the theme settings.
-  $settings = theme_get_setting('root_libraries');
+  $settings = theme_get_setting('omega_libraries');
 
   // The generated CSS file is stored in the public file system.
   $theme = $form_state['build_info']['args'][0];
-  $destination = file_create_url('public://root/' . $theme);
+  $destination = file_create_url('public://omega/' . $theme);
 
   $element['selectors'] = array(
     '#title' => t('Selectors'),
@@ -156,5 +156,5 @@ function root_library_pie_options_form(&$element, &$form, $form_state, $library,
 
   // We need to provide a submit handler to create a CSS file for the
   // defined selectors and remove them from the theme settings array.
-  $form['#submit'][] = 'root_library_pie_selectors_submit';
+  $form['#submit'][] = 'omega_library_pie_selectors_submit';
 }

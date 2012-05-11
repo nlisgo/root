@@ -3,7 +3,7 @@
 /**
 * Implements hook_process_html_tag().
 */
-function root_process_html_tag(&$variables) {
+function omega_process_html_tag(&$variables) {
   $element = &$variables['element'];
   // Remove type="something" and CDATA prefix/suffix.
   unset($element['#attributes']['type'], $element['#value_prefix'], $element['#value_suffix']);

@@ -2,10 +2,10 @@
 
 /**
  * @file
- * Template overrides and (pre-)process hooks for the Root base theme.
+ * Template overrides and (pre-)process hooks for the Omega base theme.
  */
 
-require_once dirname(__FILE__) . '/includes/root.inc';
+require_once dirname(__FILE__) . '/includes/omega.inc';
 
 /**
  * Slightly hacky performance tweak for theme_get_setting(). This resides
@@ -39,7 +39,7 @@ if ($GLOBALS['theme'] == $GLOBALS['theme_key'] && !$static = &drupal_static('the
     $static = &drupal_static('theme_get_setting');
 
     // Write the toggled state of all extensions into the theme settings.
-    foreach (root_extensions() as $extension) {
+    foreach (omega_extensions() as $extension) {
       $static[$GLOBALS['theme']]['toggle_' . $extension] = TRUE;
     }
 
@@ -54,12 +54,12 @@ if ($GLOBALS['theme'] == $GLOBALS['theme_key'] && !$static = &drupal_static('the
  * declaration to make sure that the registry is rebuilt before invoking any
  * theme hooks.
  */
-if (theme_get_setting('toggle_development') && theme_get_setting('root_rebuild_theme_registry') &&  user_access('administer site configuration')) {
+if (theme_get_setting('toggle_development') && theme_get_setting('omega_rebuild_theme_registry') &&  user_access('administer site configuration')) {
   drupal_theme_rebuild();
 
-  if (flood_is_allowed('root_' . $GLOBALS['theme'] . '_rebuild_registry_warning', 3)) {
+  if (flood_is_allowed('omega_' . $GLOBALS['theme'] . '_rebuild_registry_warning', 3)) {
     // Alert the user that the theme registry is being rebuilt on every request.
-    flood_register_event('root_' . $GLOBALS['theme'] . '_rebuild_registry_warning');
+    flood_register_event('omega_' . $GLOBALS['theme'] . '_rebuild_registry_warning');
     drupal_set_message(t('The theme registry is being rebuilt on every request. Remember to <a href="!url">turn off</a> this feature on production websites.', array("!url" => url('admin/appearance/settings/' . $GLOBALS['theme']))));
   }
 }
@@ -67,7 +67,7 @@ if (theme_get_setting('toggle_development') && theme_get_setting('root_rebuild_t
 /**
  * Implements hook_preprocess().
  */
-function root_preprocess(&$variables) {
+function omega_preprocess(&$variables) {
   // Copy over the classes array into the attributes array.
   if (!empty($variables['classes_array'])) {
     $variables['attributes_array']['class'] = !empty($variables['attributes_array']['class']) ? $variables['attributes_array']['class'] + $variables['classes_array']: $variables['classes_array'];
@@ -78,18 +78,18 @@ function root_preprocess(&$variables) {
 /**
  * Implements hook_element_info_alter().
  */
-function root_element_info_alter(&$elements) {
-  if (theme_get_setting('root_media_queries_inline') && variable_get('preprocess_css', FALSE) && (!defined('MAINTENANCE_MODE') || MAINTENANCE_MODE != 'update')) {
-    array_unshift($elements['styles']['#pre_render'], 'root_css_preprocessor');
+function omega_element_info_alter(&$elements) {
+  if (theme_get_setting('omega_media_queries_inline') && variable_get('preprocess_css', FALSE) && (!defined('MAINTENANCE_MODE') || MAINTENANCE_MODE != 'update')) {
+    array_unshift($elements['styles']['#pre_render'], 'omega_css_preprocessor');
   }
 }
 
 /**
  * Implements hook_css_alter().
  */
-function root_css_alter(&$css) {
-  if (theme_get_setting('toggle_manipulation') && $exclude = theme_get_setting('root_css_exclude')) {
-    root_exclude_assets($css, $exclude);
+function omega_css_alter(&$css) {
+  if (theme_get_setting('toggle_manipulation') && $exclude = theme_get_setting('omega_css_exclude')) {
+    omega_exclude_assets($css, $exclude);
   }
 
   // The CSS_SYSTEM aggregation group doesn't make any sense. Therefore, we are
@@ -107,13 +107,13 @@ function root_css_alter(&$css) {
 /**
  * Implements hook_js_alter().
  */
-function root_js_alter(&$js) {
-  if (theme_get_setting('toggle_manipulation') && $exclude = theme_get_setting('root_js_exclude')) {
-    root_exclude_assets($js, $exclude);
+function omega_js_alter(&$js) {
+  if (theme_get_setting('toggle_manipulation') && $exclude = theme_get_setting('omega_js_exclude')) {
+    omega_exclude_assets($js, $exclude);
   }
 
   // Move all the JavaScript to the footer if the theme is configured that way.
-  if (theme_get_setting('root_js_footer')) {
+  if (theme_get_setting('omega_js_footer')) {
     foreach ($js as &$item) {
       $item['scope'] = 'footer';
     }
@@ -127,10 +127,10 @@ function root_js_alter(&$js) {
  * files to keep the main template.php file clean. This is really fast because
  * it uses the theme registry to cache the pathes to the files that it finds.
  */
-function root_theme_registry_alter(&$registry) {
+function omega_theme_registry_alter(&$registry) {
   // Load the theme trail and all enabled extensions.
-  $trail = root_theme_trail();
-  $extensions = root_extensions();
+  $trail = omega_theme_trail();
+  $extensions = omega_extensions();
 
   foreach ($trail as $key => $theme) {
     foreach (array('preprocess', 'process', 'theme') as $type) {
@@ -172,7 +172,7 @@ function root_theme_registry_alter(&$registry) {
   // required for the next step (allowing extensions to register hooks in the
   // theme registry).
   foreach ($extensions as $extension) {
-    root_theme_trail_load_include('inc', 'extensions/' . $extension . '/' . $extension);
+    omega_theme_trail_load_include('inc', 'extensions/' . $extension . '/' . $extension);
 
     // Give every enabled extension a chance to alter the theme registry.
     foreach ($trail as $key => $theme) {
@@ -191,7 +191,7 @@ function root_theme_registry_alter(&$registry) {
  * Look for the last block in the region. This is impossible to determine from
  * within a preprocess_block function.
  */
-function root_page_alter(&$page) {
+function omega_page_alter(&$page) {
   // Look in each visible region for blocks.
   foreach (system_region_list($GLOBALS['theme'], REGIONS_VISIBLE) as $region => $name) {
     if (!empty($page[$region])) {
@@ -211,7 +211,7 @@ function root_page_alter(&$page) {
 /**
  * Implements hook_html_head_alter().
  */
-function root_html_head_alter(&$head) {
+function omega_html_head_alter(&$head) {
   // Simplify the meta tag for character encoding.
   $head['system_meta_content_type']['#attributes'] = array('charset' => str_replace('text/html; charset=', '', $head['system_meta_content_type']['#attributes']['content']));
 }
@@ -219,15 +219,15 @@ function root_html_head_alter(&$head) {
 /**
  * Implements hook_libraries_info_alter().
  */
-function root_libraries_info_alter(&$libraries) {
-  $info = root_theme_libraries_info();
+function omega_libraries_info_alter(&$libraries) {
+  $info = omega_theme_libraries_info();
   $libraries = array_merge($info, $libraries);
 }
 
 /**
- * Implements hook_root_theme_libraries_info().
+ * Implements hook_omega_theme_libraries_info().
  */
-function root_root_theme_libraries_info() {
+function omega_omega_theme_libraries_info() {
   $libraries['selectivizr'] = array(
     'name' => t('Selectivizr'),
     'description' => t('Selectivizr is a JavaScript utility that emulates CSS3 pseudo-classes and attribute selectors in Internet Explorer 6-8. Simply include the script in your pages and selectivizr will do the rest.'),
@@ -240,7 +240,7 @@ function root_root_theme_libraries_info() {
       'file' => 'changelog.txt',
       'pattern' => '@v([0-9\.]+)@',
     ),
-    'theme' => 'root',
+    'theme' => 'omega',
     'files' => array(
       'js' => array(
         'selectivizr-min.js' => array(
@@ -283,7 +283,7 @@ function root_root_theme_libraries_info() {
       'file' => 'css3-mediaqueries.js',
       'pattern' => '@version:\s([0-9\.]+)@',
     ),
-    'theme' => 'root',
+    'theme' => 'omega',
     'files' => array(
       'js' => array(
         'css3-mediaqueries.min.js' => array(
@@ -323,7 +323,7 @@ function root_root_theme_libraries_info() {
       'file' => 'respond.min.js',
       'pattern' => '@Respond\.js\sv([0-9\.]+)@',
     ),
-    'theme' => 'root',
+    'theme' => 'omega',
     'files' => array(
       'js' => array(
         'respond.min.js' => array(
@@ -362,14 +362,14 @@ function root_root_theme_libraries_info() {
       'file' => 'pie.htc',
       'pattern' => '@Version\s([a-z0-9\.]+)@',
     ),
-    'options form callback' => 'root_library_pie_options_form',
-    'theme' => 'root',
+    'options form callback' => 'omega_library_pie_options_form',
+    'theme' => 'omega',
     'files' => array(),
     // The pie library is completely different to all other libraries in how it
     // is loaded (different inclusion types, etc.) so we just handle it with a
     // custom pre-load callback.
     'callbacks' => array(
-      'post-load' => array('root_library_pie_post_load_callback'),
+      'post-load' => array('omega_library_pie_post_load_callback'),
     ),
     'variants' => array(
       'js' => array(
@@ -398,7 +398,7 @@ function root_root_theme_libraries_info() {
       'file' => 'html5.js',
       'pattern' => '@HTML5\sShiv\s([a-z0-9\.]+)@',
     ),
-    'theme' => 'root',
+    'theme' => 'omega',
     'files' => array(
       'js' => array(
         'html5.js' => array(

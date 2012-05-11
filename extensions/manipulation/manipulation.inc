@@ -8,22 +8,22 @@
 /**
  * Implements hook_extension_EXTENSION_theme_registry_alter().
  */
-function root_extension_manipulation_theme_registry_alter(&$registry) {
+function omega_extension_manipulation_theme_registry_alter(&$registry) {
   // Store all configured class rules in the right hook definition and add the
   // class killer hook to the array of preprocess functions.
-  if ($rules = theme_get_setting('root_class_rules')) {
+  if ($rules = theme_get_setting('omega_class_rules')) {
     foreach ($rules as $rule) {
       // Only write valid rules into the registry.
-      if ($rule = root_parse_class_rule($rule)) {
+      if ($rule = omega_parse_class_rule($rule)) {
         // Only proceed if the hook that this rule is targeted at exists.
         if (isset($registry[$rule['hook']])) {
           // Store the class rule in the registry for this hook.
-          $registry[$rule['hook']]['root class rules'][] = $rule;
+          $registry[$rule['hook']]['omega class rules'][] = $rule;
 
           // Make sure that we don't add the hook multiple times.
-          if (!array_search('root_apply_class_rules', $registry[$rule['hook']]['preprocess functions'])) {
-            $registry[$rule['hook']]['includes'][] = drupal_get_path('theme', 'root') . '/extensions/manipulation/manipulation.inc';
-            $registry[$rule['hook']]['preprocess functions'][] = 'root_apply_class_rules';
+          if (!array_search('omega_apply_class_rules', $registry[$rule['hook']]['preprocess functions'])) {
+            $registry[$rule['hook']]['includes'][] = drupal_get_path('theme', 'omega') . '/extensions/manipulation/manipulation.inc';
+            $registry[$rule['hook']]['preprocess functions'][] = 'omega_apply_class_rules';
           }
         }
       }
@@ -41,7 +41,7 @@ function root_extension_manipulation_theme_registry_alter(&$registry) {
  *   The array representation of the class rule or FALSE if there was a syntax
  *   error.
  */
-function root_parse_class_rule($rule) {
+function omega_parse_class_rule($rule) {
   if (preg_match('/^(\+|-)([a-z_]+)(:([a-z_])*)?\[(([a-z\-]+|(\*(?!\*))|\[[a-zA-Z0-9_# ]+(:[a-zA-Z0-9_# ]+)*\])+)\]$/', $rule, $matches)) {
     if ($matches[1] == '+' && strpos($rule, '*') !== FALSE) {
       // 'Add' rules don't support wildcards of course.
@@ -61,7 +61,7 @@ function root_parse_class_rule($rule) {
     );
 
     // If there are any tokens in our rule, extract them now.
-    if ($rule && $tokens = _root_extract_class_tokens($rule)) {
+    if ($rule && $tokens = _omega_extract_class_tokens($rule)) {
       $output['tokens'] = $tokens;
       // The token helper function alters the rule by adding placeholders to it
       // instead of the full token declarations. Therefore we h
@@ -86,7 +86,7 @@ function root_parse_class_rule($rule) {
  * @return array
  *   An array of extracted tokens.
  */
-function _root_extract_class_tokens(&$string) {
+function _omega_extract_class_tokens(&$string) {
   $tokens = array();
   if (preg_match_all('/\[([a-z0-9#_ ]+(:[a-z0-9#_ ]+)*)\]/', $string, $matches)) {
     // Optimize the token replacement process by removing duplicates.
@@ -108,13 +108,13 @@ function _root_extract_class_tokens(&$string) {
  *
  * Implements hook_preprocess_HOOK().
  */
-function root_apply_class_rules(&$variables, $hook) {
+function omega_apply_class_rules(&$variables, $hook) {
   $registry = theme_get_registry();
 
   // This hook should only get invoked if the 'class rules' property has at
   // least one rule in it. This check is just for good measure.
-  if (!empty($registry[$hook]['root class rules'])) {
-    foreach ($registry[$hook]['root class rules'] as $rule) {
+  if (!empty($registry[$hook]['omega class rules'])) {
+    foreach ($registry[$hook]['omega class rules'] as $rule) {
       $property = ($rule['subtype'] ? $rule['subtype'] . '_' : '') . 'attributes_array';
 
       if (!isset($variables[$property]) || ($rule['action'] == 'remove' && empty($variables[$property]['class']))) {
@@ -127,7 +127,7 @@ function root_apply_class_rules(&$variables, $hook) {
         foreach ($rule['tokens'] as $key => $token) {
           $exists = TRUE;
           // Retrieve the token value from the variables array.
-          $value = root_get_nested_value($variables, $token, $exists);
+          $value = omega_get_nested_value($variables, $token, $exists);
 
           if (!$exists) {
             // Proceed with the next class rule if the token does not exist in

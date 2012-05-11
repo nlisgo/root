@@ -3,7 +3,7 @@
 /**
  * Implements hook_preprocess_block().
  */
-function root_preprocess_block(&$variables) {
+function omega_preprocess_block(&$variables) {
   // Use a template with no wrapper for the page's main content.
   if ($variables['block_html_id'] == 'block-system-main') {
     $variables['theme_hook_suggestions'][] = 'block__minimal';
@@ -14,7 +14,7 @@ function root_preprocess_block(&$variables) {
     $variables['attributes_array']['class'][] = 'first';
   }
 
-  // The 'last_in_region' property is set in root_page_alter().
+  // The 'last_in_region' property is set in omega_page_alter().
   if (isset($variables['block']->last_in_region)) {
     $variables['attributes_array']['class'][] = 'last';
   }
