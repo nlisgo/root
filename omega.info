@@ -3,7 +3,8 @@ description = Omega
 screenshot = screenshot.png
 engine = phptemplate
 core = 7.x
-base theme = bartik
+
+scripts[] = js/omega.matchmedia.js
 
 features[] = logo
 features[] = favicon

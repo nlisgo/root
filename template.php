@@ -246,7 +246,6 @@ function omega_omega_theme_libraries_info() {
         'selectivizr-min.js' => array(
           // Only load Selectivizr for Internet Explorer > 6 and < 8.
           'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
-          'scope' => 'footer',
           'group' => JS_LIBRARY,
           'weight' => -100,
         ),
@@ -262,7 +261,6 @@ function omega_omega_theme_libraries_info() {
             'selectivizr.js' => array(
               // Only load Selectivizr for Internet Explorer > 6 and < 8.
               'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
-              'scope' => 'footer',
               'group' => JS_LIBRARY,
               'weight' => -100,
             ),
@@ -288,7 +286,6 @@ function omega_omega_theme_libraries_info() {
       'js' => array(
         'css3-mediaqueries.min.js' => array(
           'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
-          'scope' => 'footer',
           'group' => JS_LIBRARY,
           'weight' => -100,
         ),
@@ -302,7 +299,6 @@ function omega_omega_theme_libraries_info() {
           'js' => array(
             'css3-mediaqueries.js' => array(
               'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
-              'scope' => 'footer',
               'group' => JS_LIBRARY,
               'weight' => -100,
             ),
@@ -328,7 +324,6 @@ function omega_omega_theme_libraries_info() {
       'js' => array(
         'respond.min.js' => array(
           'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
-          'scope' => 'footer',
           'group' => JS_LIBRARY,
           'weight' => -100,
         ),
@@ -342,7 +337,6 @@ function omega_omega_theme_libraries_info() {
           'js' => array(
             'respond.js' => array(
               'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
-              'scope' => 'footer',
               'group' => JS_LIBRARY,
               'weight' => -100,
             ),
@@ -379,7 +373,6 @@ function omega_omega_theme_libraries_info() {
           'js' => array(
             'pie.js' => array(
               'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
-              'scope' => 'footer',
               'group' => JS_LIBRARY,
               'weight' => -100,
             ),
@@ -406,7 +399,6 @@ function omega_omega_theme_libraries_info() {
           'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
           'group' => JS_LIBRARY,
           'weight' => -100,
-          'scope' => 'footer',
         ),
       ),
     ),

@@ -27,7 +27,7 @@ function omega_drush_command() {
       'drush omega-subtheme "My Theme" --destination=example.com' => dt('Creates a Omega subtheme called "My Theme" in sites/example.com/themes.'),
       'drush omega-subtheme "My Theme" --starterkit=my_custom_starterkit' => dt('Uses a custom starterkit to create a Omega subtheme called "My Theme" in sites/all/themes (default).'),
     ),
-    'aliases' => array('rsub'),
+    'aliases' => array('osub'),
   );
 
   $items['omega-export'] = array(
@@ -42,7 +42,7 @@ function omega_drush_command() {
       'drush omega-export foo' => dt('Exports the theme settings of the "foo" theme to the "foo.info" file in that theme.'),
       'drush omega-export foo --revert' => dt('Purges the theme settings of the "foo" theme from the database after exporting them to the .info file.'),
     ),
-    'aliases' => array('rexp'),
+    'aliases' => array('oexp'),
   );
 
   $items['omega-revert'] = array(
@@ -53,12 +53,12 @@ function omega_drush_command() {
     'examples' => array(
       'drush omega-revert foo' => dt('Reverts the theme settings of the "foo" theme.'),
     ),
-    'aliases' => array('rrev'),
+    'aliases' => array('orev'),
   );
 
   $items['omega-download-libraries'] = array(
     'description' => dt('Downloads all available (and downloadable) libraries defined by the current default theme and all its base themes.'),
-    'aliases' => array('rdll'),
+    'aliases' => array('odll'),
   );
 
   return $items;
