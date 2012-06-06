@@ -122,7 +122,6 @@
         var bool = $.matchMedia(element);
 
         if (!mediaQueryStatus.hasOwnProperty(index) || mediaQueryStatus[index] === undefined || bool != mediaQueryStatus[index]) {
-          console.log(index);
           mediaQueryStatus[index] = bool;
         }
       });

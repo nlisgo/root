@@ -453,6 +453,11 @@ function omega_layouts_info($theme = NULL) {
   return $layouts[$theme];
 }
 
+/**
+ * @param $file
+ * @param null $theme
+ * @return bool|string
+ */
 function omega_theme_trail_find_file($file, $theme = NULL) {
   $theme = isset($theme) ? $theme : $GLOBALS['theme_key'];
 

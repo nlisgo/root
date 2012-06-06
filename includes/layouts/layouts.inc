@@ -63,7 +63,7 @@ function omega_extension_layouts_process_page(&$variables) {
 
       foreach ($variables['theme_hook_suggestions'] as &$item)  {
         if (strpos($suggestion, 'page__') === 0) {
-          $item = $suggestion . '__' . substr($suggestion, 6);
+          $item = $suggestion . '__' . substr($item, 6);
         }
       }
 
