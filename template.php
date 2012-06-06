@@ -65,6 +65,49 @@ if (theme_get_setting('toggle_development') && theme_get_setting('omega_rebuild_
 }
 
 /**
+ * Implements hook_theme().
+ */
+function omega_theme($existing, $type, $theme, $path) {
+  $info = array();
+
+  foreach (omega_layouts_info() as $key => $layout) {
+    if ($layout['supported']) {
+      $suggestion = 'page__' . str_replace('-', '_', $layout['template']);
+
+      // Some layouts might use the same template, but we don't need to run all
+      // the code below more than once.
+      if (!isset($info[$suggestion])) {
+        $info[$suggestion] = array(
+          'render element' => 'page',
+          'includes' => $layout['includes'],
+          'base hook' => 'page',
+          'type' => 'theme_engine',
+        );
+
+        foreach ($layout['includes'] as $file) {
+          // Load all the includes so we can prepare the pre-process and process
+          // functions in the next step.
+          include_once DRUPAL_ROOT . '/' . $file;
+        }
+
+        // Check for pre-process and process functions in the theme trail.
+        foreach (omega_theme_trail() as $theme => $name) {
+          foreach (array('preprocess', 'process') as $type) {
+            $hook = $theme . '_layout_' . str_replace('-', '_', $layout) . '_' . $type;
+
+            if (function_exists($hook)) {
+              $info[$suggestion][$type . ' functions'][] = $hook;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return $info;
+}
+
+/**
  * Implements hook_preprocess().
  */
 function omega_preprocess(&$variables) {
@@ -128,11 +171,7 @@ function omega_js_alter(&$js) {
  * it uses the theme registry to cache the pathes to the files that it finds.
  */
 function omega_theme_registry_alter(&$registry) {
-  // Load the theme trail and all enabled extensions.
-  $trail = omega_theme_trail();
-  $extensions = omega_extensions();
-
-  foreach ($trail as $key => $theme) {
+  foreach (omega_theme_trail() as $key => $theme) {
     foreach (array('preprocess', 'process', 'theme') as $type) {
       $path = drupal_get_path('theme', $key);
       // Only look for files that match the 'something.preprocess.inc' pattern.
@@ -171,11 +210,11 @@ function omega_theme_registry_alter(&$registry) {
   // Include the main extension file for every enabled extensions. This is
   // required for the next step (allowing extensions to register hooks in the
   // theme registry).
-  foreach ($extensions as $extension) {
-    omega_theme_trail_load_include('inc', 'extensions/' . $extension . '/' . $extension);
+  foreach (omega_extensions() as $extension) {
+    omega_theme_trail_load_include('inc', 'includes/' . $extension . '/' . $extension);
 
     // Give every enabled extension a chance to alter the theme registry.
-    foreach ($trail as $key => $theme) {
+    foreach (omega_theme_trail() as $key => $theme) {
       $hook = $key . '_extension_' . $extension . '_theme_registry_alter';
       if (function_exists($hook)) {
         $hook($registry);
@@ -405,4 +444,21 @@ function omega_omega_theme_libraries_info() {
   );
 
   return $libraries;
+}
+
+// Implements hook_omega_layouts_info().
+function omega_omega_layouts_info() {
+  $info['default'] = array(
+    'label' => t('Default layout'),
+    'description' => t('The default layout.'),
+    'required regions' => array(),
+  );
+
+  $info['stacked'] = array(
+    'label' => t('Stacked layout'),
+    'description' => t('The stacked layout.'),
+    'required regions' => array(),
+  );
+
+  return $info;
 }

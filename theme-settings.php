@@ -18,13 +18,22 @@ function omega_form_system_theme_settings_alter(&$form, $form_state) {
     return;
   }
 
+  // Include the template.php for all the themes in the theme trail.
+  foreach (omega_theme_trail() as $theme => $name) {
+    $filename = DRUPAL_ROOT . '/' . drupal_get_path('theme', $theme) . '/template.php';
+    if (file_exists($filename)) {
+      require_once $filename;
+    }
+  }
+
   // Get the admin theme so we can set a class for styling this form.
   $admin = drupal_html_class(variable_get('admin_theme', $GLOBALS['theme']));
   $form['#prefix'] = '<div class="admin-theme-' . $admin . '">';
   $form['#suffix'] = '</div>';
 
-  // Add some custom styling to our theme settings form.
+  // Add some custom styling and functionality to our theme settings form.
   $form['#attached']['css'][] = drupal_get_path('theme', 'omega') . '/css/omega.admin.css';
+  $form['#attached']['js'][] = drupal_get_path('theme', 'omega') . '/js/omega.admin.js';
 
   // Collapse all the core theme settings tabs in order to have the form actions
   // visible all the time without having to scroll.
@@ -44,7 +53,7 @@ function omega_form_system_theme_settings_alter(&$form, $form_state) {
   foreach (omega_extensions() as $extension) {
     // Load all the implementations for this extensions and invoke the according
     // hooks.
-    omega_theme_trail_load_include('inc', 'extensions/' . $extension . '/' . $extension . '.settings');
+    omega_theme_trail_load_include('inc', 'includes/' . $extension . '/' . $extension . '.settings');
 
     // By default, each extension resides in a vertical tab.
     $element = array(

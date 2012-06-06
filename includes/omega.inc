@@ -187,11 +187,11 @@ function omega_exclude_assets(&$elements, $exclude) {
  * form based on which extensions are enabled. Each extension can define a
  * theme settings form altering function named
  * 'THEMENAME_extension_EXTENSION_theme_settings_form_alter()' and optionally
- * put it into 'THEME_ROOT/includes/extensions/EXTENSION.settings.inc' to have
+ * put it into 'THEME_ROOT/includes/includes/EXTENSION.settings.inc' to have
  * it automatically included whenever the theme settings form is displayed
  * (given that the extension is currently enabled). Each extension can also
  * define a 'THEMENAME_extension_EXTENSION_theme_registry_alter()' function and
- * optionally put it into 'THEME_ROOT/includes/extensions/EXTENSION.inc' to
+ * optionally put it into 'THEME_ROOT/includes/includes/EXTENSION.inc' to
  * register custom hooks with the theme registry.
  *
  * @param $theme
@@ -222,6 +222,32 @@ function omega_extensions($theme = NULL) {
   }
 
   return $features[$theme];
+}
+
+/**
+ * @param null $theme
+ * @param bool $merge
+ * @return mixed
+ */
+function omega_theme_trail_info($element, $merge = TRUE, $theme = NULL) {
+  $output = array();
+
+  // Loop over all themes in the theme trail and look up $element in the .info
+  // array.
+  foreach (array_reverse(omega_theme_trail($theme)) as $key => $name) {
+    $info = omega_theme_info($key);
+
+    // If $merge is TRUE we combine all the results of all themes in the theme
+    // trail. Otherwise we just return the first occurrence.
+    if (isset($info[$element]) && is_array($info[$element])) {
+      $output = array_merge($info[$element], $output);
+    }
+    if (!$merge) {
+      break;
+    }
+  }
+
+  return $output;
 }
 
 /**
@@ -256,21 +282,31 @@ function omega_theme_info($theme = NULL) {
  *   The include file's type (file extension).
  * @param $name
  *   The base file name (without the $type extension).
+ * @param $all
+ *   (Optional) Whether all occurrences of this file should be loaded or just
+ *   the first. Defaults to TRUE (all).
  * @param $theme
  *   (Optional) The key (machine-readable name) of a theme. Defaults to the key
  *   of the current theme.
  *
  * @see module_load_include()
  */
-function omega_theme_trail_load_include($type, $name, $theme = NULL) {
+function omega_theme_trail_load_include($type, $name, $all = TRUE, $theme = NULL) {
   $theme = isset($theme) ? $theme : $GLOBALS['theme_key'];
+  $trail = array_reverse(omega_theme_trail($theme));
 
-  foreach (omega_theme_trail($theme) as $key => $title) {
+  foreach ($trail as $key => $title) {
     // Check if the requested file exists in any of the themes in the theme
     // trail and include all occurrences.
     $file = DRUPAL_ROOT . '/' . drupal_get_path('theme', $key) . "/$name.$type";
     if (is_file($file)) {
       include_once $file;
+
+      // Exit right here if we only want the first occurrence of this file to
+      // be loaded.
+      if (!$all) {
+        return;
+      }
     }
   }
 }
@@ -299,6 +335,7 @@ function omega_invoke_all($hook, $theme = NULL) {
   $return = array();
   foreach (omega_theme_trail($theme) as $key => $name) {
     $function = $key . '_' . $hook;
+
     if (function_exists($function)) {
       $result = call_user_func_array($function, $args);
       if (isset($result) && is_array($result)) {
@@ -371,4 +408,60 @@ function omega_theme_libraries_info() {
     $libraries[$library] = libraries_info_defaults($info, $library);
   }
   return $libraries;
+}
+
+/**
+ * @return array
+ */
+function omega_layouts_info($theme = NULL) {
+  $theme = isset($theme) ? $theme : $GLOBALS['theme_key'];
+  $layouts = drupal_static('__FUNCTION__');
+
+  if (!isset($layouts[$theme]) || 1 == 1) {
+    $regions = system_region_list($GLOBALS['theme_key']);
+
+    foreach (omega_invoke_all('omega_layouts_info') as $layout => $info) {
+      $info['layout'] = $layout;
+      // If a layout requires a region that is not supported by the active theme
+      // the layout is flagged as unsupported.
+      $info['supported'] = !array_diff_key($info['required regions'], $regions);
+
+      // Provide some defaults.
+      $layouts[$theme][$layout] = $info + array(
+        'label' => ucfirst($layout),
+        'description' => '',
+        'icon' => drupal_get_path('theme', 'omega') . '/images/layout-icon-placeholder.png',
+        'template' => $layout,
+        'includes' => array(),
+        'attached' => array(),
+      );
+
+      // Automatically register all include files in the theme trail that are
+      // named after the layout.
+      foreach (omega_theme_trail() as $key => $name) {
+        $file = drupal_get_path('theme', $key) . "/includes/layouts/$layout.layout.inc";
+        if (is_file($file)) {
+          $layouts[$theme][$layout]['includes'][] = $file;
+        }
+      }
+    }
+
+    // Give all themes in the theme trail a chance to alter the layouts.
+    drupal_alter('omega_layouts_info', $layouts);
+  }
+
+  return $layouts[$theme];
+}
+
+function omega_theme_trail_find_file($file, $theme = NULL) {
+  $theme = isset($theme) ? $theme : $GLOBALS['theme_key'];
+
+  foreach (array_reverse(omega_theme_trail($theme)) as $key => $name) {
+    $path = drupal_get_path('theme', $theme) . '/' . $file;
+    if (is_file($path)) {
+      return $path;
+    }
+  }
+
+  return FALSE;
 }

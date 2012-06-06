@@ -21,3 +21,24 @@ div.vertical-tabs .vertical-tabs-panes .vertical-tabs-pane fieldset {
     display: block;
   }
 }
+
+.omega-layout-selection-wrapper {
+  margin-bottom: 20px;
+  min-height: 140px;
+  position: relative;
+
+  .form-item {
+    label.option,
+    div.description {
+      padding-left: 130px;
+    }
+  }
+
+  img {
+    height: 140px;
+    width: 120px;
+    position: absolute;
+    top: 8px;
+    margin-left: 1.5em;
+  }
+}

@@ -13,7 +13,7 @@ function omega_extension_libraries_theme_registry_alter(&$registry) {
   if (module_exists('libraries') && $libraries = theme_get_setting('omega_libraries')) {
     foreach ($libraries as $settings) {
       if (!empty($settings['status'])) {
-        $registry['html']['includes'][] = drupal_get_path('theme', 'omega') . '/extensions/libraries/libraries.inc';
+        $registry['html']['includes'][] = drupal_get_path('theme', 'omega') . '/includes/libraries/libraries.inc';
         $registry['html']['preprocess functions'][] = 'omega_extension_libraries_preprocess_html';
 
         return;

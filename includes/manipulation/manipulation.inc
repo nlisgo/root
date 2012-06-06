@@ -22,7 +22,7 @@ function omega_extension_manipulation_theme_registry_alter(&$registry) {
 
           // Make sure that we don't add the hook multiple times.
           if (!array_search('omega_apply_class_rules', $registry[$rule['hook']]['preprocess functions'])) {
-            $registry[$rule['hook']]['includes'][] = drupal_get_path('theme', 'omega') . '/extensions/manipulation/manipulation.inc';
+            $registry[$rule['hook']]['includes'][] = drupal_get_path('theme', 'omega') . '/includes/manipulation/manipulation.inc';
             $registry[$rule['hook']]['preprocess functions'][] = 'omega_apply_class_rules';
           }
         }

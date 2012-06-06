@@ -5,6 +5,8 @@
  * Theme settings file for the Default Starterkit theme.
  */
 
+require_once dirname(__FILE__) . '/template.php';
+
 /**
  * Implements hook_form_FORM_alter().
  */
