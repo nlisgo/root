@@ -4,8 +4,6 @@ screenshot = screenshot.png
 engine = phptemplate
 core = 7.x
 
-scripts[] = js/omega.matchmedia.js
-
 features[] = logo
 features[] = favicon
 features[] = name
