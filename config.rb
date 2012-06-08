@@ -22,9 +22,10 @@ images_dir      = "images"
 javascripts_dir = "js"
 
 # Require any additional compass plugins installed on your system.
+require 'rgbapng'
 #require 'susy'
 #require 'stitch'
-#require 'normalize'
+#require 'compass-normalize'
 
 ##
 ## You probably don't need to edit anything below this.

@@ -425,19 +425,34 @@ function omega_omega_theme_libraries_info() {
     'name' => t('HTML5 Shiv'),
     'description' => t('This script is the defacto way to enable use of HTML5 sectioning elements in legacy Internet Explorer, as well as default HTML5 styling in Internet Explorer 6 - 9, Safari 4.x (and iPhone 3.x), and Firefox 3.x.'),
     'vendor' => 'Alexander Farkas',
-    'library path' => 'http://html5shiv.googlecode.com/svn/trunk',
+    'download url' => 'https://github.com/aFarkas/html5shiv/tarball/master',
+    'download subdirectory' => '/^aFarjas-html5shiv-[a-z0-9]+$/',
     'version arguments' => array(
-      'file' => 'html5.js',
+      'file' => 'src/html5shiv.js',
       'pattern' => '@HTML5\sShiv\s([a-z0-9\.]+)@',
     ),
     'theme' => 'omega',
     'files' => array(
       'js' => array(
-        'html5.js' => array(
+        'dist/html5shiv.js' => array(
           'type' => 'external',
           'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
           'group' => JS_LIBRARY,
-          'weight' => -100,
+        ),
+      ),
+    ),
+    'variants' => array(
+      'source' => array(
+        'name' => t('Source'),
+        'description' => t('During development it might be useful to include the source files instead of the minified version.'),
+        'files' => array(
+          'js' => array(
+            'src/html5shiv.js' => array(
+              'type' => 'external',
+              'browsers' => array('IE' => '(gte IE 6)&(lte IE 8)', '!IE' => FALSE),
+              'group' => JS_LIBRARY,
+            ),
+          ),
         ),
       ),
     ),
