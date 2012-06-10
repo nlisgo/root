@@ -4,6 +4,8 @@
  * Implements hook_preprocess_block().
  */
 function omega_preprocess_block(&$variables) {
+  $variables['attributes_array']['id'] = $variables['block_html_id'];
+
   // Use a template with no wrapper for the page's main content.
   if ($variables['block_html_id'] == 'block-system-main') {
     $variables['theme_hook_suggestions'][] = 'block__minimal';
